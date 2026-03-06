@@ -1,18 +1,43 @@
 #include <Arduino.h>
+#include <DHT.h>
 
-// put function declarations here:
-// e.g., #define LED_BUILTIN 2
+#define DHTPIN 4
+#define DHTTYPE DHT22
 
-// This code run once
+DHT dht(DHTPIN, DHTTYPE);
+
 void setup()
 {
-  //
+  Serial.begin(115200);
+  delay(2000);
+
+  Serial.println("==================================");
+  Serial.println("ServerSensei Environmental Monitor");
+  Serial.println("ESP32 + DHT22 started");
+  Serial.println("==================================");
+
+  dht.begin();
 }
 
-// put your main code here, to run repeatedly:
 void loop()
 {
-  //
-}
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
 
-// put function definitions here:
+  if (isnan(humidity) || isnan(temperature))
+  {
+    Serial.println("Error: Failed to read from DHT22 sensor");
+  }
+  else
+  {
+    Serial.print("Temperature: ");
+    Serial.print(temperature, 1);
+    Serial.print(" °C");
+
+    Serial.print(" | Humidity: ");
+    Serial.print(humidity, 1);
+    Serial.println(" %");
+  }
+
+  delay(2000);
+}
