@@ -9,6 +9,9 @@
 const char *WIFI_SSID = "Mjao";
 const char *WIFI_PASSWORD = "123123124";
 
+const char *DEVICE_NAME = "ServerSensei";
+const char *DEVICE_MODE = "monitor";
+
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);
 
@@ -20,7 +23,7 @@ void connectToWiFi()
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20)
+  while (WiFi.status() != WL_CONNECTED && attempts < 30)
   {
     delay(500);
     Serial.print(".");
@@ -41,30 +44,70 @@ void connectToWiFi()
   }
 }
 
-void handleRoot()
+String getWiFiStatus()
 {
-  server.send(200, "text/plain", "ServerSensei ESP32 is running");
+  return WiFi.status() == WL_CONNECTED ? "connected" : "disconnected";
 }
 
-void handleSensorData()
+void handleHealth()
+{
+  String json = "{";
+  json += "\"device\":\"" + String(DEVICE_NAME) + "\",";
+  json += "\"status\":\"ok\"";
+  json += "}";
+
+  server.send(200, "application/json", json);
+}
+
+void handleSensor()
 {
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
 
   if (isnan(humidity) || isnan(temperature))
   {
-    server.send(500, "application/json",
-                "{\"error\":\"Failed to read from DHT22 sensor\"}");
+    String json = "{";
+    json += "\"error\":\"Failed to read from DHT22 sensor\"";
+    json += "}";
+
+    server.send(500, "application/json", json);
     return;
   }
 
   String json = "{";
   json += "\"temperature\":" + String(temperature, 1) + ",";
-  json += "\"humidity\":" + String(humidity, 1) + ",";
-  json += "\"wifi\":\"" + String(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected") + "\"";
+  json += "\"humidity\":" + String(humidity, 1);
   json += "}";
 
   server.send(200, "application/json", json);
+}
+
+void handleStatus()
+{
+  String json = "{";
+  json += "\"wifi\":\"" + getWiFiStatus() + "\",";
+  json += "\"mode\":\"" + String(DEVICE_MODE) + "\",";
+  json += "\"uptime\":" + String(millis());
+  json += "}";
+
+  server.send(200, "application/json", json);
+}
+
+void handleNotFound()
+{
+  String json = "{";
+  json += "\"error\":\"Endpoint not found\"";
+  json += "}";
+
+  server.send(404, "application/json", json);
+}
+
+void setupRoutes()
+{
+  server.on("/health", HTTP_GET, handleHealth);
+  server.on("/sensor", HTTP_GET, handleSensor);
+  server.on("/status", HTTP_GET, handleStatus);
+  server.onNotFound(handleNotFound);
 }
 
 void setup()
@@ -73,21 +116,21 @@ void setup()
   delay(2000);
 
   Serial.println("==================================");
-  Serial.println("ServerSensei Environmental Monitor");
-  Serial.println("ESP32 + DHT22 + Wi-Fi + Web Server");
+  Serial.println("ServerSensei Telemetry API");
+  Serial.println("ESP32 + DHT22 + Wi-Fi");
   Serial.println("==================================");
 
   dht.begin();
   connectToWiFi();
-
-  server.on("/", handleRoot);
-  server.on("/sensor", handleSensorData);
+  setupRoutes();
 
   server.begin();
-  Serial.println("Web server started");
+
+  Serial.println("HTTP server started");
   Serial.println("Available endpoints:");
-  Serial.println("/");
+  Serial.println("/health");
   Serial.println("/sensor");
+  Serial.println("/status");
 }
 
 void loop()
@@ -97,25 +140,27 @@ void loop()
   static unsigned long lastPrint = 0;
   unsigned long now = millis();
 
-  if (now - lastPrint >= 3000)
+  if (now - lastPrint >= 5000)
   {
     lastPrint = now;
 
     float humidity = dht.readHumidity();
     float temperature = dht.readTemperature();
 
+    Serial.print("[Heartbeat] Wi-Fi: ");
+    Serial.print(getWiFiStatus());
+
     if (isnan(humidity) || isnan(temperature))
     {
-      Serial.println("Error: Failed to read from DHT22 sensor");
+      Serial.println(" | Sensor read failed");
     }
     else
     {
-      Serial.print("Temperature: ");
+      Serial.print(" | Temp: ");
       Serial.print(temperature, 1);
       Serial.print(" C | Humidity: ");
       Serial.print(humidity, 1);
-      Serial.print(" % | Wi-Fi: ");
-      Serial.println(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected");
+      Serial.println(" %");
     }
   }
 }
