@@ -7,6 +7,7 @@
 
 #define DHTPIN 4
 #define DHTTYPE DHT22
+#define LED_PIN 2
 
 const char *WIFI_SSID = "Deld";
 const char *WIFI_PASSWORD = "123123124oq";
@@ -208,6 +209,20 @@ bool executeCommand(JsonObject command)
     return true;
   }
 
+  if (String(action) == "led_on")
+  {
+    digitalWrite(LED_PIN, HIGH);
+    Serial.println("[Commands] LED turned ON");
+    return true;
+  }
+
+  if (String(action) == "led_off")
+  {
+    digitalWrite(LED_PIN, LOW);
+    Serial.println("[Commands] LED turned OFF");
+    return true;
+  }
+
   Serial.print("[Commands] Unknown action: ");
   Serial.println(action);
   return false;
@@ -321,6 +336,10 @@ void setup()
   Serial.println("==================================");
 
   dht.begin();
+
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
   connectToWiFi();
   setupRoutes();
 
