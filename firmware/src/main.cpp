@@ -12,7 +12,7 @@ const char *WIFI_SSID = "Deld";
 const char *WIFI_PASSWORD = "123123124oq";
 
 const char *DEVICE_NAME = "ServerSensei";
-const char *DEVICE_MODE = "monitor";
+String deviceMode = "monitor";
 
 const char *DEVICE_ID = "serversensei-esp32-001";
 const char *BACKEND_URL = "http://172.29.40.124:8000";
@@ -91,7 +91,7 @@ void handleStatus()
 {
   String json = "{";
   json += "\"wifi\":\"" + getWiFiStatus() + "\",";
-  json += "\"mode\":\"" + String(DEVICE_MODE) + "\",";
+  json += "\"mode\":\"" + deviceMode + "\",";
   json += "\"uptime\":" + String(millis());
   json += "}";
 
@@ -136,8 +136,6 @@ void reportCommandResult(int commandId, String status, String message)
 
   Serial.print("[Commands] Reporting result to: ");
   Serial.println(url);
-  Serial.print("[Commands] Result body: ");
-  Serial.println(requestBody);
 
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
@@ -149,9 +147,8 @@ void reportCommandResult(int commandId, String status, String message)
     Serial.print("[Commands] Result report HTTP ");
     Serial.println(httpResponseCode);
 
-    String response = http.getString();
     Serial.print("[Commands] Result response: ");
-    Serial.println(response);
+    Serial.println(http.getString());
   }
   else
   {
@@ -160,6 +157,60 @@ void reportCommandResult(int commandId, String status, String message)
   }
 
   http.end();
+}
+
+bool executeCommand(JsonObject command)
+{
+  const char *action = command["action"];
+
+  if (action == nullptr)
+  {
+    Serial.println("[Commands] Missing action");
+    return false;
+  }
+
+  if (String(action) == "set_mode")
+  {
+    JsonObject payload = command["payload"];
+
+    if (payload.isNull())
+    {
+      Serial.println("[Commands] Missing payload for set_mode");
+      return false;
+    }
+
+    const char *newMode = payload["mode"];
+
+    if (newMode == nullptr)
+    {
+      Serial.println("[Commands] Missing mode value");
+      return false;
+    }
+
+    String modeValue = String(newMode);
+
+    if (
+        modeValue != "monitor" &&
+        modeValue != "manual" &&
+        modeValue != "automatic" &&
+        modeValue != "safe")
+    {
+      Serial.print("[Commands] Invalid mode: ");
+      Serial.println(modeValue);
+      return false;
+    }
+
+    deviceMode = modeValue;
+
+    Serial.print("[Commands] Device mode changed to: ");
+    Serial.println(deviceMode);
+
+    return true;
+  }
+
+  Serial.print("[Commands] Unknown action: ");
+  Serial.println(action);
+  return false;
 }
 
 void pollPendingCommands()
@@ -230,10 +281,22 @@ void pollPendingCommands()
           Serial.print("Status: ");
           Serial.println(status);
 
-          reportCommandResult(
-              commandId,
-              "executed",
-              "Command received by ESP32");
+          bool success = executeCommand(command);
+
+          if (success)
+          {
+            reportCommandResult(
+                commandId,
+                "executed",
+                "Command executed successfully");
+          }
+          else
+          {
+            reportCommandResult(
+                commandId,
+                "failed",
+                "Command execution failed");
+          }
         }
       }
     }
