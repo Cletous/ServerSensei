@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user
+from app.models.alert import Alert
 from app.models.device import Device
 from app.models.sensor_reading import SensorReading
 from app.models.device_status import DeviceStatus
@@ -40,8 +41,20 @@ def receive_telemetry(
 
     db.add(sensor_reading)
 
+    was_online = device.online
+
     device.online = True
     device.mode = request.mode
+
+    if was_online is False:
+        db.add(
+            Alert(
+                device_id=device.id,
+                alert_type="DEVICE_ONLINE",
+                severity="info",
+                message=f"Device {device.device_id} is back online"
+            )
+        )
 
     device_status = db.query(DeviceStatus).filter(
         DeviceStatus.device_id == device.id

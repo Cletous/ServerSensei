@@ -20,39 +20,19 @@ def update_device_online_states(db: Session):
         if not device:
             continue
 
-        was_online = device.online
-
         if status.last_seen < offline_cutoff:
             if device.online:
                 device.online = False
 
-                existing_offline_alert = db.query(Alert).filter(
-                    Alert.device_id == device.id,
-                    Alert.alert_type == "DEVICE_OFFLINE"
-                ).order_by(
-                    Alert.created_at.desc()
-                ).first()
-
-                if not existing_offline_alert:
-                    db.add(
-                        Alert(
-                            device_id=device.id,
-                            alert_type="DEVICE_OFFLINE",
-                            severity="critical",
-                            message=f"Device {device.device_id} appears to be offline"
-                        )
-                    )
-        else:
-            device.online = True
-
-            if was_online is False:
                 db.add(
                     Alert(
                         device_id=device.id,
-                        alert_type="DEVICE_ONLINE",
-                        severity="info",
-                        message=f"Device {device.device_id} is back online"
+                        alert_type="DEVICE_OFFLINE",
+                        severity="critical",
+                        message=f"Device {device.device_id} appears to be offline"
                     )
                 )
+        else:
+            device.online = True
 
     db.commit()
