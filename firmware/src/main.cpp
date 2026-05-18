@@ -13,7 +13,9 @@ const char *WIFI_SSID = "Deld";
 const char *WIFI_PASSWORD = "123123124oq";
 
 const char *DEVICE_NAME = "ServerSensei";
+
 String deviceMode = "monitor";
+bool ledState = false;
 
 const char *DEVICE_ID = "serversensei-esp32-001";
 const char *BACKEND_URL = "http://172.29.40.124:8000";
@@ -93,7 +95,8 @@ void handleStatus()
   String json = "{";
   json += "\"wifi\":\"" + getWiFiStatus() + "\",";
   json += "\"mode\":\"" + deviceMode + "\",";
-  json += "\"uptime\":" + String(millis());
+  json += "\"uptime\":" + String(millis()) + ",";
+  json += "\"led\":\"" + String(ledState ? "on" : "off") + "\"";
   json += "}";
 
   server.send(200, "application/json", json);
@@ -212,6 +215,7 @@ bool executeCommand(JsonObject command)
   if (String(action) == "led_on")
   {
     digitalWrite(LED_PIN, HIGH);
+    ledState = true;
     Serial.println("[Commands] LED turned ON");
     return true;
   }
@@ -219,6 +223,7 @@ bool executeCommand(JsonObject command)
   if (String(action) == "led_off")
   {
     digitalWrite(LED_PIN, LOW);
+    ledState = false;
     Serial.println("[Commands] LED turned OFF");
     return true;
   }
