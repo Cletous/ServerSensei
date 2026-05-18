@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_user, require_role
 from app.models.device import Device
 from app.models.device_status import DeviceStatus
 from app.models.user import User
@@ -17,7 +17,7 @@ router = APIRouter(
 def register_device(
     request: DeviceRegisterRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role(["admin"]))
 ):
     existing_device = db.query(Device).filter(
         Device.device_id == request.device_id
