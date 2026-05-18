@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.models import user, device, sensor_reading, device_status, command, alert
-from app.routers import auth, commands, devices, telemetry
+from app.routers import alerts, auth, commands, devices, telemetry
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,6 +26,7 @@ def health_check():
     }
 
 app.include_router(auth.router)
+app.include_router(alerts.router)
 app.include_router(devices.router)
 app.include_router(telemetry.router)
 app.include_router(commands.router)
