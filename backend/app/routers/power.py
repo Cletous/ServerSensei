@@ -6,6 +6,7 @@ from app.models.device import Device
 from app.models.power_status import PowerStatus
 from app.models.user import User
 from app.schemas.power import PowerStatusResponse
+from app.services.power_prediction_service import estimate_ups_runtime_minutes
 
 router = APIRouter(
     tags=["Power"]
@@ -37,10 +38,17 @@ def get_device_power_status(
             detail="Power status not found for this device"
         )
 
+    estimated_runtime_minutes = estimate_ups_runtime_minutes(
+    power_source=power_status.power_source,
+    battery_percent=power_status.battery_percent,
+    load_percent=power_status.load_percent
+    )
+
     return PowerStatusResponse(
         device_id=device.device_id,
         power_source=power_status.power_source,
         battery_percent=power_status.battery_percent,
         load_percent=power_status.load_percent,
+        estimated_runtime_minutes=estimated_runtime_minutes,
         updated_at=power_status.updated_at
     )

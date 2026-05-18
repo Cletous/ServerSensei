@@ -6,4 +6,5 @@ class PowerStatusResponse(BaseModel):
     power_source: str
     battery_percent: float | None
     load_percent: float | None
+    estimated_runtime_minutes: float | None
     updated_at: datetime

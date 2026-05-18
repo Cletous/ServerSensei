@@ -1,10 +1,14 @@
 from sqlalchemy.orm import Session
 from app.models.alert import Alert
 from app.models.device import Device
+from app.services.power_prediction_service import estimate_ups_runtime_minutes
+
 HIGH_TEMPERATURE_THRESHOLD = 35.0
 HIGH_HUMIDITY_THRESHOLD = 75.0
 LOW_BATTERY_THRESHOLD = 30.0
 HIGH_LOAD_THRESHOLD = 80.0
+LOW_RUNTIME_THRESHOLD_MINUTES = 20.0
+CRITICAL_RUNTIME_THRESHOLD_MINUTES = 10.0
 
 def check_telemetry_alerts(
     db: Session,
@@ -66,6 +70,32 @@ def check_telemetry_alerts(
                 message=f"Load is high: {load_percent}%"
             )
         )
+
+    estimated_runtime = estimate_ups_runtime_minutes(
+        power_source=power_source,
+        battery_percent=battery_percent,
+        load_percent=load_percent
+    )
+
+    if estimated_runtime is not None:
+        if estimated_runtime <= CRITICAL_RUNTIME_THRESHOLD_MINUTES:
+            alerts.append(
+                Alert(
+                    device_id=device.id,
+                    alert_type="CRITICAL_RUNTIME",
+                    severity="critical",
+                    message=f"Estimated UPS runtime is critically low: {estimated_runtime} minutes"
+                )
+            )
+        elif estimated_runtime <= LOW_RUNTIME_THRESHOLD_MINUTES:
+            alerts.append(
+                Alert(
+                    device_id=device.id,
+                    alert_type="LOW_RUNTIME",
+                    severity="warning",
+                    message=f"Estimated UPS runtime is low: {estimated_runtime} minutes"
+                )
+            )
 
     for alert in alerts:
         db.add(alert)
