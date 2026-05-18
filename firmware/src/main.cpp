@@ -115,6 +115,53 @@ void setupRoutes()
   server.onNotFound(handleNotFound);
 }
 
+void reportCommandResult(int commandId, String status, String message)
+{
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("[Commands] Wi-Fi disconnected, cannot report command result");
+    return;
+  }
+
+  HTTPClient http;
+
+  String url = String(BACKEND_URL) + "/commands/" + String(commandId) + "/result";
+
+  StaticJsonDocument<256> doc;
+  doc["status"] = status;
+  doc["message"] = message;
+
+  String requestBody;
+  serializeJson(doc, requestBody);
+
+  Serial.print("[Commands] Reporting result to: ");
+  Serial.println(url);
+  Serial.print("[Commands] Result body: ");
+  Serial.println(requestBody);
+
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpResponseCode = http.POST(requestBody);
+
+  if (httpResponseCode > 0)
+  {
+    Serial.print("[Commands] Result report HTTP ");
+    Serial.println(httpResponseCode);
+
+    String response = http.getString();
+    Serial.print("[Commands] Result response: ");
+    Serial.println(response);
+  }
+  else
+  {
+    Serial.print("[Commands] Result report failed: ");
+    Serial.println(http.errorToString(httpResponseCode));
+  }
+
+  http.end();
+}
+
 void pollPendingCommands()
 {
   if (WiFi.status() != WL_CONNECTED)
@@ -182,6 +229,11 @@ void pollPendingCommands()
           Serial.println(action);
           Serial.print("Status: ");
           Serial.println(status);
+
+          reportCommandResult(
+              commandId,
+              "executed",
+              "Command received by ESP32");
         }
       }
     }
