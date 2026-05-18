@@ -2,21 +2,22 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.dependencies.auth import get_current_user
 from app.models.device import Device
 from app.models.device_status import DeviceStatus
+from app.models.user import User
 from app.schemas.device import DeviceRegisterRequest, DeviceResponse
-
 
 router = APIRouter(
     prefix="/devices",
     tags=["Devices"]
 )
 
-
 @router.post("/register", response_model=DeviceResponse)
 def register_device(
     request: DeviceRegisterRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     existing_device = db.query(Device).filter(
         Device.device_id == request.device_id
@@ -54,7 +55,8 @@ def register_device(
 
 @router.get("", response_model=list[DeviceResponse])
 def get_devices(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     devices = db.query(Device).all()
     return devices
@@ -62,7 +64,8 @@ def get_devices(
 @router.get("/{device_id}", response_model=DeviceResponse)
 def get_device(
     device_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     device = db.query(Device).filter(
         Device.device_id == device_id
