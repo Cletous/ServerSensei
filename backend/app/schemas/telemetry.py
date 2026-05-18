@@ -9,6 +9,10 @@ class TelemetryRequest(BaseModel):
     mode: str
     uptime: int
 
+    power_source: str | None = None
+    battery_percent: float | None = None
+    load_percent: float | None = None
+
 class TelemetryResponse(BaseModel):
     message: str
 

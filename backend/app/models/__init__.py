@@ -1,5 +1,6 @@
 from app.models.user import User
 from app.models.device import Device
+from app.models.power_status import PowerStatus
 from app.models.sensor_reading import SensorReading
 from app.models.device_status import DeviceStatus
 from app.models.command import Command

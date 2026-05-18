@@ -4,6 +4,7 @@ from app.core.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.alert import Alert
 from app.models.device import Device
+from app.models.power_status import PowerStatus
 from app.models.sensor_reading import SensorReading
 from app.models.device_status import DeviceStatus
 from app.models.user import User
@@ -73,11 +74,42 @@ def receive_telemetry(
         )
         db.add(device_status)
 
+    if (
+        request.power_source is not None or
+        request.battery_percent is not None or
+        request.load_percent is not None
+    ):
+        power_status = db.query(PowerStatus).filter(
+            PowerStatus.device_id == device.id
+        ).first()
+
+        if power_status:
+            if request.power_source is not None:
+                power_status.power_source = request.power_source
+
+            if request.battery_percent is not None:
+                power_status.battery_percent = request.battery_percent
+
+            if request.load_percent is not None:
+                power_status.load_percent = request.load_percent
+        else:
+            power_status = PowerStatus(
+                device_id=device.id,
+                power_source=request.power_source or "unknown",
+                battery_percent=request.battery_percent,
+                load_percent=request.load_percent
+            )
+
+            db.add(power_status)
+
     check_telemetry_alerts(
         db=db,
         device=device,
         temperature=request.temperature,
-        humidity=request.humidity
+        humidity=request.humidity,
+        power_source=request.power_source,
+        battery_percent=request.battery_percent,
+        load_percent=request.load_percent
     )
 
     db.commit()
