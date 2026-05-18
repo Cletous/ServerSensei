@@ -8,11 +8,11 @@ class Device(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    device_id = Column(String, unique=True, index=True, nullable=False)
-    device_name = Column(String, nullable=False)
-    location = Column(String, nullable=True)
+    device_id = Column(String(100), unique=True, index=True, nullable=False)
+    device_name = Column(String(100), nullable=False)
+    location = Column(String(255), nullable=True)
 
-    mode = Column(String, default="monitor", nullable=False)
+    mode = Column(String(50), default="monitor", nullable=False)
     online = Column(Boolean, default=False, nullable=False)
 
     created_at = Column(

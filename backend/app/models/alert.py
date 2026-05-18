@@ -14,9 +14,9 @@ class Alert(Base):
         nullable=False
     )
 
-    alert_type = Column(String, nullable=False)
-    severity = Column(String, nullable=False)
-    message = Column(String, nullable=False)
+    alert_type = Column(String(100), nullable=False)
+    severity = Column(String(50), nullable=False)
+    message = Column(String(255), nullable=False)
 
     created_at = Column(
         DateTime(timezone=True),

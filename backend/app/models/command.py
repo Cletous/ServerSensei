@@ -20,10 +20,10 @@ class Command(Base):
         nullable=True
     )
 
-    action = Column(String, nullable=False)
+    action = Column(String(100), nullable=False)
     payload = Column(JSON, nullable=True)
 
-    status = Column(String, default="pending", nullable=False)
+    status = Column(String(50), default="pending", nullable=False)
 
     created_at = Column(
         DateTime(timezone=True),

@@ -15,8 +15,8 @@ class DeviceStatus(Base):
         unique=True
     )
 
-    wifi_status = Column(String, nullable=False)
-    mode = Column(String, default="monitor", nullable=False)
+    wifi_status = Column(String(50), nullable=False)
+    mode = Column(String(50), default="monitor", nullable=False)
     uptime = Column(Integer, default=0, nullable=False)
 
     last_seen = Column(
