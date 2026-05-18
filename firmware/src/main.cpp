@@ -206,6 +206,13 @@ bool executeCommand(JsonObject command)
 
     deviceMode = modeValue;
 
+    if (deviceMode == "safe")
+    {
+      digitalWrite(LED_PIN, LOW);
+      ledState = false;
+      Serial.println("[Commands] Safe mode activated: LED forced OFF");
+    }
+
     Serial.print("[Commands] Device mode changed to: ");
     Serial.println(deviceMode);
 
@@ -214,6 +221,12 @@ bool executeCommand(JsonObject command)
 
   if (String(action) == "led_on")
   {
+    if (deviceMode != "manual")
+    {
+      Serial.println("[Commands] LED command rejected: device is not in manual mode");
+      return false;
+    }
+
     digitalWrite(LED_PIN, HIGH);
     ledState = true;
     Serial.println("[Commands] LED turned ON");
@@ -222,6 +235,12 @@ bool executeCommand(JsonObject command)
 
   if (String(action) == "led_off")
   {
+    if (deviceMode != "manual")
+    {
+      Serial.println("[Commands] LED command rejected: device is not in manual mode");
+      return false;
+    }
+
     digitalWrite(LED_PIN, LOW);
     ledState = false;
     Serial.println("[Commands] LED turned OFF");
