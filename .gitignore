@@ -4,4 +4,8 @@
 .vscode/launch.json
 .vscode/ipch
 backend/.env
-/backend/app/routers/__pycache__
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
