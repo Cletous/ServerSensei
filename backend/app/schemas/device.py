@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 class DeviceRegisterRequest(BaseModel):
@@ -15,3 +16,13 @@ class DeviceResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DeviceStatusResponse(BaseModel):
+    device_id: str
+    device_name: str
+    location: str | None
+    mode: str
+    online: bool
+    wifi_status: str
+    uptime: int
+    last_seen: datetime

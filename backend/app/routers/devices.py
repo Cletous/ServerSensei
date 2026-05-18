@@ -6,7 +6,11 @@ from app.dependencies.auth import get_current_user, require_role
 from app.models.device import Device
 from app.models.device_status import DeviceStatus
 from app.models.user import User
-from app.schemas.device import DeviceRegisterRequest, DeviceResponse
+from app.schemas.device import (
+    DeviceRegisterRequest,
+    DeviceResponse,
+    DeviceStatusResponse,
+)
 
 router = APIRouter(
     prefix="/devices",
@@ -60,6 +64,43 @@ def get_devices(
 ):
     devices = db.query(Device).all()
     return devices
+
+@router.get("/{device_id}/status", response_model=DeviceStatusResponse)
+def get_device_status(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(Device).filter(
+        Device.device_id == device_id
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    device_status = db.query(DeviceStatus).filter(
+        DeviceStatus.device_id == device.id
+    ).first()
+
+    if not device_status:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device status not found"
+        )
+
+    return DeviceStatusResponse(
+        device_id=device.device_id,
+        device_name=device.device_name,
+        location=device.location,
+        mode=device.mode,
+        online=device.online,
+        wifi_status=device_status.wifi_status,
+        uptime=device_status.uptime,
+        last_seen=device_status.last_seen
+    )
 
 @router.get("/{device_id}", response_model=DeviceResponse)
 def get_device(
