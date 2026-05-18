@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import BaseModel
 
 class TelemetryRequest(BaseModel):
@@ -10,3 +11,12 @@ class TelemetryRequest(BaseModel):
 
 class TelemetryResponse(BaseModel):
     message: str
+
+class TelemetryReadingResponse(BaseModel):
+    id: int
+    temperature: float
+    humidity: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
