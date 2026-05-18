@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import get_current_user, require_role
+from app.dependencies.auth import require_role
 from app.models.command import Command
 from app.models.device import Device
 from app.models.user import User
@@ -15,6 +15,17 @@ from app.schemas.command import (
 router = APIRouter(
     tags=["Commands"]
 )
+
+def build_command_response(command: Command, device: Device) -> CommandResponse:
+    return CommandResponse(
+        id=command.id,
+        device_id=device.device_id,
+        action=command.action,
+        payload=command.payload,
+        status=command.status,
+        created_at=command.created_at,
+        executed_at=command.executed_at
+    )
 
 @router.post("/commands", response_model=CommandResponse)
 def create_command(
@@ -44,7 +55,7 @@ def create_command(
     db.commit()
     db.refresh(command)
 
-    return command
+    return build_command_response(command, device)
 
 @router.get(
     "/devices/{device_id}/commands/pending",
@@ -71,7 +82,10 @@ def get_pending_commands(
         Command.created_at.asc()
     ).all()
 
-    return commands
+    return [
+        build_command_response(command, device)
+        for command in commands
+    ]
 
 @router.post("/commands/{command_id}/result", response_model=CommandResponse)
 def report_command_result(
@@ -97,10 +111,14 @@ def report_command_result(
             detail="Status must be either executed or failed"
         )
 
+    device = db.query(Device).filter(
+        Device.id == command.device_id
+    ).first()
+
     command.status = request.status
     command.executed_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(command)
 
-    return command
+    return build_command_response(command, device)
