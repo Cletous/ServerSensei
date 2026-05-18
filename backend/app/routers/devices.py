@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.core.database import get_db
 from app.dependencies.auth import get_current_user, require_role
 from app.models.device import Device
@@ -11,6 +10,7 @@ from app.schemas.device import (
     DeviceResponse,
     DeviceStatusResponse,
 )
+from app.services.device_monitoring_service import update_device_online_states
 
 router = APIRouter(
     prefix="/devices",
@@ -62,6 +62,8 @@ def get_devices(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    update_device_online_states(db)
+    
     devices = db.query(Device).all()
     return devices
 
@@ -71,6 +73,8 @@ def get_device_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    update_device_online_states(db)
+
     device = db.query(Device).filter(
         Device.device_id == device_id
     ).first()

@@ -11,3 +11,4 @@ venv/
 .env
 /backend/app/routers/__pycache__
 /backend/app/__pycache__
+*.pyc
