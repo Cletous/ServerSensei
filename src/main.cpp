@@ -6,8 +6,8 @@
 #define DHTPIN 4
 #define DHTTYPE DHT22
 
-const char *WIFI_SSID = "Mjao";
-const char *WIFI_PASSWORD = "123123124";
+const char *WIFI_SSID = "Deld";
+const char *WIFI_PASSWORD = "123123124oq";
 
 const char *DEVICE_NAME = "ServerSensei";
 const char *DEVICE_MODE = "monitor";
