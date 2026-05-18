@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 #include <DHT.h>
 
 #define DHTPIN 4
@@ -11,6 +13,9 @@ const char *WIFI_PASSWORD = "123123124oq";
 
 const char *DEVICE_NAME = "ServerSensei";
 const char *DEVICE_MODE = "monitor";
+
+const char *DEVICE_ID = "serversensei-esp32-001";
+const char *BACKEND_URL = "http://172.29.40.124:8000";
 
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);
@@ -110,6 +115,86 @@ void setupRoutes()
   server.onNotFound(handleNotFound);
 }
 
+void pollPendingCommands()
+{
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("[Commands] Wi-Fi disconnected, skipping command polling");
+    return;
+  }
+
+  HTTPClient http;
+
+  String url = String(BACKEND_URL) + "/devices/" + String(DEVICE_ID) + "/commands/pending";
+
+  Serial.print("[Commands] Polling: ");
+  Serial.println(url);
+
+  http.begin(url);
+
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode > 0)
+  {
+    String response = http.getString();
+
+    Serial.print("[Commands] HTTP ");
+    Serial.println(httpResponseCode);
+
+    Serial.print("[Commands] Response: ");
+    Serial.println(response);
+
+    if (httpResponseCode == 200)
+    {
+      StaticJsonDocument<2048> doc;
+
+      DeserializationError error = deserializeJson(doc, response);
+
+      if (error)
+      {
+        Serial.print("[Commands] JSON parse failed: ");
+        Serial.println(error.c_str());
+        http.end();
+        return;
+      }
+
+      JsonArray commands = doc.as<JsonArray>();
+
+      if (commands.size() == 0)
+      {
+        Serial.println("[Commands] No pending commands");
+      }
+      else
+      {
+        Serial.print("[Commands] Pending command count: ");
+        Serial.println(commands.size());
+
+        for (JsonObject command : commands)
+        {
+          int commandId = command["id"];
+          const char *action = command["action"];
+          const char *status = command["status"];
+
+          Serial.println("----- Command -----");
+          Serial.print("ID: ");
+          Serial.println(commandId);
+          Serial.print("Action: ");
+          Serial.println(action);
+          Serial.print("Status: ");
+          Serial.println(status);
+        }
+      }
+    }
+  }
+  else
+  {
+    Serial.print("[Commands] Request failed: ");
+    Serial.println(http.errorToString(httpResponseCode));
+  }
+
+  http.end();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -138,6 +223,8 @@ void loop()
   server.handleClient();
 
   static unsigned long lastPrint = 0;
+  static unsigned long lastCommandPoll = 0;
+
   unsigned long now = millis();
 
   if (now - lastPrint >= 5000)
@@ -162,5 +249,11 @@ void loop()
       Serial.print(humidity, 1);
       Serial.println(" %");
     }
+  }
+
+  if (now - lastCommandPoll >= 10000)
+  {
+    lastCommandPoll = now;
+    pollPendingCommands();
   }
 }
