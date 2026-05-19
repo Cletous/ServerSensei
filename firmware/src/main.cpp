@@ -783,6 +783,46 @@ void sendTelemetryToBackend()
   http.end();
 }
 
+// Test each LED one by one
+void testAllLEDs()
+{
+  // All OFF first
+  digitalWrite(GREEN_LED_PIN, LOW);
+  digitalWrite(YELLOW_LED_1_PIN, LOW);
+  digitalWrite(YELLOW_LED_2_PIN, LOW);
+  digitalWrite(RED_LED_1_PIN, LOW);
+  digitalWrite(RED_LED_2_PIN, LOW);
+  delay(1000);
+
+  // Turn each one ON for 1 second
+  Serial.println("Testing Green LED (GPIO23)");
+  digitalWrite(GREEN_LED_PIN, HIGH);
+  delay(1000);
+  digitalWrite(GREEN_LED_PIN, LOW);
+
+  Serial.println("Testing Yellow LED 1 (GPIO19)");
+  digitalWrite(YELLOW_LED_1_PIN, HIGH);
+  delay(1000);
+  digitalWrite(YELLOW_LED_1_PIN, LOW);
+
+  Serial.println("Testing Yellow LED 2 (GPIO18)");
+  digitalWrite(YELLOW_LED_2_PIN, HIGH);
+  delay(1000);
+  digitalWrite(YELLOW_LED_2_PIN, LOW);
+
+  Serial.println("Testing Red LED 1 (GPIO17)");
+  digitalWrite(RED_LED_1_PIN, HIGH);
+  delay(1000);
+  digitalWrite(RED_LED_1_PIN, LOW);
+
+  Serial.println("Testing Red LED 2 (GPIO16)");
+  digitalWrite(RED_LED_2_PIN, HIGH);
+  delay(1000);
+  digitalWrite(RED_LED_2_PIN, LOW);
+
+  Serial.println("LED test complete!");
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -801,8 +841,18 @@ void setup()
   pinMode(RED_LED_1_PIN, OUTPUT);
   pinMode(RED_LED_2_PIN, OUTPUT);
 
-  pinMode(GRID_SWITCH_PIN, INPUT_PULLDOWN);
-  pinMode(GENERATOR_SWITCH_PIN, INPUT_PULLDOWN);
+  pinMode(GRID_SWITCH_PIN, INPUT);
+  pinMode(GENERATOR_SWITCH_PIN, INPUT);
+
+  // temporary code block
+  Serial.println("=== BUTTON DEBUG ===");
+  Serial.print("Grid button initial reading: ");
+  Serial.println(digitalRead(GRID_SWITCH_PIN));
+  Serial.print("Generator button initial reading: ");
+  Serial.println(digitalRead(GENERATOR_SWITCH_PIN));
+  Serial.println("===================");
+
+  testAllLEDs();
 
   setLoadState("normal");
   readPowerSwitches();
