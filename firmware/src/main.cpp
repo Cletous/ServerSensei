@@ -8,12 +8,16 @@
 #define DHTPIN 4
 #define DHTTYPE DHT22
 
-// Milestone 19 LED Server Simulation Pins
+// LED Server Simulation Pins
 #define GREEN_LED_PIN 23
 #define YELLOW_LED_1_PIN 19
 #define YELLOW_LED_2_PIN 18
 #define RED_LED_1_PIN 17
 #define RED_LED_2_PIN 16
+
+// Power Source Simulation Pins
+#define GRID_SWITCH_PIN 33
+#define GENERATOR_SWITCH_PIN 5
 
 const char *WIFI_SSID = "Deld";
 const char *WIFI_PASSWORD = "123123124oq";
@@ -24,12 +28,19 @@ const char *BACKEND_URL = "http://172.29.40.124:8000";
 
 String deviceMode = "monitor";
 String loadState = "normal";
+String powerSource = "unknown";
 
 bool greenLedState = false;
 bool yellowLed1State = false;
 bool yellowLed2State = false;
 bool redLed1State = false;
 bool redLed2State = false;
+
+bool gridAvailable = false;
+bool generatorAvailable = false;
+
+float batteryPercent = 100.0;
+float loadPercent = 100.0;
 
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);
@@ -41,6 +52,49 @@ void applyLEDStates()
   digitalWrite(YELLOW_LED_2_PIN, yellowLed2State ? HIGH : LOW);
   digitalWrite(RED_LED_1_PIN, redLed1State ? HIGH : LOW);
   digitalWrite(RED_LED_2_PIN, redLed2State ? HIGH : LOW);
+}
+
+void updateLoadPercent()
+{
+  if (loadState == "normal")
+  {
+    loadPercent = 100.0;
+  }
+  else if (loadState == "low_runtime")
+  {
+    loadPercent = 60.0;
+  }
+  else if (loadState == "critical_runtime")
+  {
+    loadPercent = 35.0;
+  }
+  else if (loadState == "safe")
+  {
+    loadPercent = 30.0;
+  }
+  else if (loadState == "all_off")
+  {
+    loadPercent = 0.0;
+  }
+  else
+  {
+    loadPercent = 100.0;
+  }
+}
+
+float estimateRuntimeMinutes()
+{
+  if (powerSource != "ups")
+  {
+    return -1;
+  }
+
+  if (batteryPercent <= 0 || loadPercent <= 0)
+  {
+    return -1;
+  }
+
+  return (batteryPercent / loadPercent) * 60.0;
 }
 
 void setLoadState(String newState)
@@ -104,7 +158,112 @@ void setLoadState(String newState)
     return;
   }
 
+  updateLoadPercent();
   applyLEDStates();
+}
+
+void readPowerSwitches()
+{
+  gridAvailable = digitalRead(GRID_SWITCH_PIN) == HIGH;
+  generatorAvailable = digitalRead(GENERATOR_SWITCH_PIN) == HIGH;
+
+  String previousPowerSource = powerSource;
+
+  if (gridAvailable)
+  {
+    powerSource = "grid";
+  }
+  else if (generatorAvailable)
+  {
+    powerSource = "generator";
+  }
+  else
+  {
+    powerSource = "ups";
+  }
+
+  if (previousPowerSource != powerSource)
+  {
+    Serial.print("[Power] Source changed from ");
+    Serial.print(previousPowerSource);
+    Serial.print(" to ");
+    Serial.println(powerSource);
+  }
+}
+
+void applyAutomaticPowerDecision()
+{
+  if (deviceMode != "automatic")
+  {
+    return;
+  }
+
+  if (powerSource == "grid" || powerSource == "generator")
+  {
+    if (loadState != "normal")
+    {
+      setLoadState("normal");
+    }
+
+    return;
+  }
+
+  if (powerSource == "ups")
+  {
+    float runtime = estimateRuntimeMinutes();
+
+    if (runtime > 0 && runtime <= 10.0)
+    {
+      if (loadState != "critical_runtime")
+      {
+        Serial.println("[Decision] Critical UPS runtime detected");
+        setLoadState("critical_runtime");
+      }
+    }
+    else if (runtime > 0 && runtime <= 20.0)
+    {
+      if (loadState != "low_runtime")
+      {
+        Serial.println("[Decision] Low UPS runtime detected");
+        setLoadState("low_runtime");
+      }
+    }
+  }
+}
+
+void updateBatterySimulation()
+{
+  readPowerSwitches();
+  updateLoadPercent();
+
+  if (powerSource == "ups")
+  {
+    float drainAmount = 0.15 * (loadPercent / 100.0);
+
+    if (loadPercent <= 0)
+    {
+      drainAmount = 0.02;
+    }
+
+    batteryPercent -= drainAmount;
+
+    if (batteryPercent < 0)
+    {
+      batteryPercent = 0;
+    }
+  }
+  else
+  {
+    batteryPercent += 0.20;
+
+    if (batteryPercent > 100)
+    {
+      batteryPercent = 100;
+    }
+  }
+
+  applyAutomaticPowerDecision();
+  updateLoadPercent();
 }
 
 void connectToWiFi()
@@ -185,14 +344,30 @@ void handleSensor()
 
 void handleStatus()
 {
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<768> doc;
 
   doc["device_id"] = DEVICE_ID;
   doc["device_name"] = DEVICE_NAME;
   doc["wifi"] = getWiFiStatus();
   doc["mode"] = deviceMode;
   doc["load_state"] = loadState;
+  doc["power_source"] = powerSource;
+  doc["grid_available"] = gridAvailable;
+  doc["generator_available"] = generatorAvailable;
+  doc["battery_percent"] = batteryPercent;
+  doc["load_percent"] = loadPercent;
   doc["uptime"] = millis();
+
+  float runtime = estimateRuntimeMinutes();
+
+  if (runtime > 0)
+  {
+    doc["estimated_runtime_minutes"] = runtime;
+  }
+  else
+  {
+    doc["estimated_runtime_minutes"] = nullptr;
+  }
 
   JsonObject leds = doc.createNestedObject("leds");
   leds["green_system_healthy"] = greenLedState;
@@ -382,8 +557,38 @@ bool executeCommand(JsonObject command)
     return true;
   }
 
-  // Legacy compatibility from the previous milestone.
-  // In manual mode, led_on means "normal visual state".
+  if (actionValue == "set_battery_percent")
+  {
+    JsonObject payload = command["payload"];
+
+    if (payload.isNull())
+    {
+      Serial.println("[Commands] Missing payload for set_battery_percent");
+      return false;
+    }
+
+    if (!payload.containsKey("battery_percent"))
+    {
+      Serial.println("[Commands] Missing battery_percent value");
+      return false;
+    }
+
+    float newBatteryPercent = payload["battery_percent"];
+
+    if (newBatteryPercent < 0 || newBatteryPercent > 100)
+    {
+      Serial.println("[Commands] battery_percent must be between 0 and 100");
+      return false;
+    }
+
+    batteryPercent = newBatteryPercent;
+
+    Serial.print("[Commands] Battery percent set to: ");
+    Serial.println(batteryPercent);
+
+    return true;
+  }
+
   if (actionValue == "led_on")
   {
     if (deviceMode != "manual")
@@ -397,8 +602,6 @@ bool executeCommand(JsonObject command)
     return true;
   }
 
-  // Legacy compatibility from the previous milestone.
-  // In manual mode, led_off means "all simulated loads off".
   if (actionValue == "led_off")
   {
     if (deviceMode != "manual")
@@ -537,7 +740,7 @@ void sendTelemetryToBackend()
 
   String url = String(BACKEND_URL) + "/telemetry";
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<768> doc;
 
   doc["device_id"] = DEVICE_ID;
   doc["temperature"] = temperature;
@@ -545,6 +748,10 @@ void sendTelemetryToBackend()
   doc["wifi"] = getWiFiStatus();
   doc["mode"] = deviceMode;
   doc["uptime"] = millis();
+
+  doc["power_source"] = powerSource;
+  doc["battery_percent"] = batteryPercent;
+  doc["load_percent"] = loadPercent;
 
   String requestBody;
   serializeJson(doc, requestBody);
@@ -582,8 +789,8 @@ void setup()
   delay(2000);
 
   Serial.println("==================================");
-  Serial.println("ServerSensei Milestone 19");
-  Serial.println("LED-Based Server Load Simulation");
+  Serial.println("ServerSensei Milestone 20");
+  Serial.println("Grid + Generator + UPS Simulation");
   Serial.println("==================================");
 
   dht.begin();
@@ -594,7 +801,11 @@ void setup()
   pinMode(RED_LED_1_PIN, OUTPUT);
   pinMode(RED_LED_2_PIN, OUTPUT);
 
+  pinMode(GRID_SWITCH_PIN, INPUT_PULLDOWN);
+  pinMode(GENERATOR_SWITCH_PIN, INPUT_PULLDOWN);
+
   setLoadState("normal");
+  readPowerSwitches();
 
   connectToWiFi();
   setupRoutes();
@@ -615,8 +826,15 @@ void loop()
   static unsigned long lastPrint = 0;
   static unsigned long lastCommandPoll = 0;
   static unsigned long lastTelemetryUpload = 0;
+  static unsigned long lastPowerUpdate = 0;
 
   unsigned long now = millis();
+
+  if (now - lastPowerUpdate >= 5000)
+  {
+    lastPowerUpdate = now;
+    updateBatterySimulation();
+  }
 
   if (now - lastPrint >= 5000)
   {
@@ -624,13 +842,33 @@ void loop()
 
     float humidity = dht.readHumidity();
     float temperature = dht.readTemperature();
+    float runtime = estimateRuntimeMinutes();
 
     Serial.print("[Heartbeat] Wi-Fi: ");
     Serial.print(getWiFiStatus());
     Serial.print(" | Mode: ");
     Serial.print(deviceMode);
+    Serial.print(" | Power: ");
+    Serial.print(powerSource);
+    Serial.print(" | Grid: ");
+    Serial.print(gridAvailable ? "ON" : "OFF");
+    Serial.print(" | Generator: ");
+    Serial.print(generatorAvailable ? "ON" : "OFF");
+    Serial.print(" | Battery: ");
+    Serial.print(batteryPercent, 1);
+    Serial.print("%");
+    Serial.print(" | Load: ");
+    Serial.print(loadPercent, 1);
+    Serial.print("%");
     Serial.print(" | Load state: ");
     Serial.print(loadState);
+
+    if (runtime > 0)
+    {
+      Serial.print(" | Runtime: ");
+      Serial.print(runtime, 1);
+      Serial.print(" min");
+    }
 
     if (isnan(humidity) || isnan(temperature))
     {
