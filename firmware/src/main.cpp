@@ -17,14 +17,24 @@
 
 // Power Source Simulation Pins
 #define GRID_SWITCH_PIN 33
-#define GENERATOR_SWITCH_PIN 5
+#define GENERATOR_SWITCH_PIN 34
+
+// Battery Voltage monitoring
+#define VOLTAGE_SENSOR_PIN 36
+float batteryVoltage = 0.0;
+float batteryPercent = 100.0;
+
+// Voltage sensor calibration
+const float VOLTAGE_DIVIDER_RATIO = 8.21; // changed to align with with multimeter reading
+const float ADC_REFERENCE_VOLTAGE = 3.3;  // ESP32 ADC reference
+const int ADC_MAX = 4095;                 // 12‑bit ADC
 
 const char *WIFI_SSID = "Deld";
 const char *WIFI_PASSWORD = "123123124oq";
 
 const char *DEVICE_NAME = "ServerSensei";
 const char *DEVICE_ID = "serversensei-esp32-001";
-const char *BACKEND_URL = "http://172.29.40.124:8000";
+const char *BACKEND_URL = "http://10.215.37.124:8000";
 
 String deviceMode = "monitor";
 String loadState = "normal";
@@ -39,8 +49,14 @@ bool redLed2State = false;
 bool gridAvailable = false;
 bool generatorAvailable = false;
 
-float batteryPercent = 100.0;
 float loadPercent = 100.0;
+
+unsigned long lastGridDebounceTime = 0;
+unsigned long lastGenDebounceTime = 0;
+const unsigned long debounceDelay = 50;
+
+bool lastGridState = LOW;
+bool lastGenState = LOW;
 
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);
@@ -164,8 +180,43 @@ void setLoadState(String newState)
 
 void readPowerSwitches()
 {
-  gridAvailable = digitalRead(GRID_SWITCH_PIN) == HIGH;
-  generatorAvailable = digitalRead(GENERATOR_SWITCH_PIN) == HIGH;
+  bool currentGridState = digitalRead(GRID_SWITCH_PIN);
+  bool currentGenState = digitalRead(GENERATOR_SWITCH_PIN);
+
+  // Debounce Grid button
+  if (currentGridState != lastGridState)
+  {
+    lastGridDebounceTime = millis();
+  }
+
+  if ((millis() - lastGridDebounceTime) > debounceDelay)
+  {
+    if (currentGridState != gridAvailable)
+    {
+      gridAvailable = currentGridState;
+      Serial.print("[Power] Grid state changed to: ");
+      Serial.println(gridAvailable ? "AVAILABLE" : "UNAVAILABLE");
+    }
+  }
+
+  // Debounce Generator button
+  if (currentGenState != lastGenState)
+  {
+    lastGenDebounceTime = millis();
+  }
+
+  if ((millis() - lastGenDebounceTime) > debounceDelay)
+  {
+    if (currentGenState != generatorAvailable)
+    {
+      generatorAvailable = currentGenState;
+      Serial.print("[Power] Generator state changed to: ");
+      Serial.println(generatorAvailable ? "AVAILABLE" : "UNAVAILABLE");
+    }
+  }
+
+  lastGridState = currentGridState;
+  lastGenState = currentGenState;
 
   String previousPowerSource = powerSource;
 
@@ -189,6 +240,66 @@ void readPowerSwitches()
     Serial.print(" to ");
     Serial.println(powerSource);
   }
+}
+
+float readBatteryVoltage()
+{
+  const int numSamples = 50;
+  long sum = 0;
+  for (int i = 0; i < numSamples; i++)
+  {
+    sum += analogRead(VOLTAGE_SENSOR_PIN);
+    delay(2); // slightly longer delay
+  }
+  int rawADC = sum / numSamples;
+
+  // Exponential moving average (smooths sudden changes)
+  static float filteredADC = -1;
+  const float alpha = 0.3; // 0-1, higher = more filtering
+  if (filteredADC < 0)
+    filteredADC = rawADC;
+  filteredADC = alpha * rawADC + (1 - alpha) * filteredADC;
+
+  float sensorOutputVoltage = (filteredADC / (float)ADC_MAX) * ADC_REFERENCE_VOLTAGE;
+
+  static int debugCounter = 0;
+  if (++debugCounter >= 10)
+  {
+    debugCounter = 0;
+    Serial.print("DEBUG: rawADC = ");
+    Serial.print(rawADC);
+    Serial.print(" | filteredADC = ");
+    Serial.print(filteredADC, 0);
+    Serial.print(" | sensorOutputVoltage = ");
+    Serial.print(sensorOutputVoltage, 3);
+    Serial.println(" V");
+  }
+
+  float batteryV = sensorOutputVoltage * VOLTAGE_DIVIDER_RATIO;
+  return batteryV;
+}
+
+float voltageToBatteryPercent(float voltage)
+{
+  if (voltage >= 4.20)
+    return 100.0;
+  if (voltage >= 4.10)
+    return 90.0 + (voltage - 4.10) * 100.0;
+  if (voltage >= 4.00)
+    return 80.0 + (voltage - 4.00) * 100.0;
+  if (voltage >= 3.90)
+    return 60.0 + (voltage - 3.90) * 200.0;
+  if (voltage >= 3.80)
+    return 40.0 + (voltage - 3.80) * 200.0;
+  if (voltage >= 3.70)
+    return 20.0 + (voltage - 3.70) * 200.0;
+  if (voltage >= 3.60)
+    return 10.0 + (voltage - 3.60) * 100.0;
+  if (voltage >= 3.50)
+    return 5.0 + (voltage - 3.50) * 50.0;
+  if (voltage >= 3.30)
+    return (voltage - 3.30) * 25.0; // 0‑5% between 3.3V and 3.5V
+  return 0.0;
 }
 
 void applyAutomaticPowerDecision()
@@ -233,37 +344,23 @@ void applyAutomaticPowerDecision()
 
 void updateBatterySimulation()
 {
-  readPowerSwitches();
+  // Read actual battery voltage from sensor
+  batteryVoltage = readBatteryVoltage();
+
+  // Convert voltage to percentage using the mapping
+  batteryPercent = voltageToBatteryPercent(batteryVoltage);
+
+  // Clamp to 0-100% just in case
+  if (batteryPercent < 0)
+    batteryPercent = 0;
+  if (batteryPercent > 100)
+    batteryPercent = 100;
+
+  // Update load percent based on current load state
   updateLoadPercent();
 
-  if (powerSource == "ups")
-  {
-    float drainAmount = 0.15 * (loadPercent / 100.0);
-
-    if (loadPercent <= 0)
-    {
-      drainAmount = 0.02;
-    }
-
-    batteryPercent -= drainAmount;
-
-    if (batteryPercent < 0)
-    {
-      batteryPercent = 0;
-    }
-  }
-  else
-  {
-    batteryPercent += 0.20;
-
-    if (batteryPercent > 100)
-    {
-      batteryPercent = 100;
-    }
-  }
-
+  // Re‑evaluate automatic decisions (if in automatic mode)
   applyAutomaticPowerDecision();
-  updateLoadPercent();
 }
 
 void connectToWiFi()
@@ -828,8 +925,19 @@ void setup()
   Serial.begin(115200);
   delay(2000);
 
+  // Calibration check for voltage sensor
+  Serial.println("\n=== Voltage Sensor Calibration ===");
+  float testVoltage = readBatteryVoltage();
+  Serial.print("Raw battery voltage: ");
+  Serial.print(testVoltage, 3);
+  Serial.println(" V");
+  Serial.print("Calculated percentage: ");
+  Serial.println(voltageToBatteryPercent(testVoltage), 1);
+  Serial.println("Compare with multimeter reading at TP4056 B+.");
+  Serial.println("If difference >0.1V, adjust VOLTAGE_DIVIDER_RATIO.\n");
+
   Serial.println("==================================");
-  Serial.println("ServerSensei Milestone 20");
+  Serial.println("ServerSensei");
   Serial.println("Grid + Generator + UPS Simulation");
   Serial.println("==================================");
 
@@ -841,8 +949,8 @@ void setup()
   pinMode(RED_LED_1_PIN, OUTPUT);
   pinMode(RED_LED_2_PIN, OUTPUT);
 
-  pinMode(GRID_SWITCH_PIN, INPUT);
-  pinMode(GENERATOR_SWITCH_PIN, INPUT);
+  pinMode(GRID_SWITCH_PIN, INPUT_PULLDOWN);
+  pinMode(GENERATOR_SWITCH_PIN, INPUT_PULLDOWN);
 
   // temporary code block
   Serial.println("=== BUTTON DEBUG ===");
@@ -872,6 +980,80 @@ void setup()
 void loop()
 {
   server.handleClient();
+
+  // Add this inside loop() for manual testing via Serial Monitor
+  static String lastCommand = "";
+  if (Serial.available())
+  {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    cmd.toLowerCase();
+
+    if (cmd == "normal")
+    {
+      setLoadState("normal");
+      Serial.println("→ Load state: NORMAL - all LEDs ON");
+    }
+    else if (cmd == "low")
+    {
+      setLoadState("low_runtime");
+      Serial.println("→ Load state: LOW RUNTIME - only red LEDs ON");
+    }
+    else if (cmd == "critical")
+    {
+      setLoadState("critical_runtime");
+      Serial.println("→ Load state: CRITICAL RUNTIME - only red LED 1 ON");
+    }
+    else if (cmd == "safe")
+    {
+      setLoadState("safe");
+      Serial.println("→ Load state: SAFE - only red LED 1 ON");
+    }
+    else if (cmd == "off")
+    {
+      setLoadState("all_off");
+      Serial.println("→ Load state: ALL OFF - all LEDs OFF");
+    }
+    else if (cmd == "mode monitor")
+    {
+      deviceMode = "monitor";
+      Serial.println("→ Mode: MONITOR - read-only");
+    }
+    else if (cmd == "mode manual")
+    {
+      deviceMode = "manual";
+      Serial.println("→ Mode: MANUAL - can manually change load");
+    }
+    else if (cmd == "mode auto")
+    {
+      deviceMode = "automatic";
+      Serial.println("→ Mode: AUTOMATIC - system controls load");
+    }
+    else if (cmd == "battery 100")
+    {
+      batteryPercent = 100;
+      Serial.println("→ Battery set to 100%");
+    }
+    else if (cmd == "battery 50")
+    {
+      batteryPercent = 50;
+      Serial.println("→ Battery set to 50%");
+    }
+    else if (cmd == "battery 20")
+    {
+      batteryPercent = 20;
+      Serial.println("→ Battery set to 20%");
+    }
+    else if (cmd == "help")
+    {
+      Serial.println("\n=== COMMANDS ===");
+      Serial.println("normal, low, critical, safe, off - Change load state");
+      Serial.println("mode monitor, mode manual, mode auto - Change device mode");
+      Serial.println("battery 100, battery 50, battery 20 - Set battery %");
+      Serial.println("help - Show this menu");
+      Serial.println("================\n");
+    }
+  }
 
   static unsigned long lastPrint = 0;
   static unsigned long lastCommandPoll = 0;
