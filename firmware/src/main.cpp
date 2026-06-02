@@ -19,6 +19,13 @@
 #define GRID_SWITCH_PIN 33
 #define GENERATOR_SWITCH_PIN 34
 
+// Air quality monitoring
+#define MQ135_PIN 35
+
+int airQualityRaw = 0;
+float airQualityVoltage = 0.0;
+String airQualityStatus = "unknown";
+
 // Battery Voltage monitoring
 #define VOLTAGE_SENSOR_PIN 36
 float batteryVoltage = 0.0;
@@ -34,7 +41,7 @@ const char *WIFI_PASSWORD = "123123124oq";
 
 const char *DEVICE_NAME = "ServerSensei";
 const char *DEVICE_ID = "serversensei-esp32-001";
-const char *BACKEND_URL = "http://10.215.37.124:8000";
+const char *BACKEND_URL = "http://10.46.77.124:8000";
 
 String deviceMode = "monitor";
 String loadState = "normal";
@@ -277,6 +284,29 @@ float readBatteryVoltage()
 
   float batteryV = sensorOutputVoltage * VOLTAGE_DIVIDER_RATIO;
   return batteryV;
+}
+
+void readAirQuality()
+{
+  airQualityRaw = analogRead(MQ135_PIN);
+  airQualityVoltage = (airQualityRaw / 4095.0) * 3.3;
+
+  if (airQualityRaw < 500)
+  {
+    airQualityStatus = "good";
+  }
+  else if (airQualityRaw < 800)
+  {
+    airQualityStatus = "moderate";
+  }
+  else if (airQualityRaw < 1200)
+  {
+    airQualityStatus = "poor";
+  }
+  else
+  {
+    airQualityStatus = "hazardous";
+  }
 }
 
 float voltageToBatteryPercent(float voltage)
@@ -952,13 +982,7 @@ void setup()
   pinMode(GRID_SWITCH_PIN, INPUT);
   pinMode(GENERATOR_SWITCH_PIN, INPUT);
 
-  // temporary code block
-  Serial.println("=== BUTTON DEBUG ===");
-  Serial.print("Grid button initial reading: ");
-  Serial.println(digitalRead(GRID_SWITCH_PIN));
-  Serial.print("Generator button initial reading: ");
-  Serial.println(digitalRead(GENERATOR_SWITCH_PIN));
-  Serial.println("===================");
+  pinMode(MQ135_PIN, INPUT);
 
   testAllLEDs();
 
@@ -1074,6 +1098,7 @@ void loop()
   {
     lastPowerUpdate = now;
     updateBatterySimulation();
+    readAirQuality();
   }
 
   if (now - lastPrint >= 5000)
@@ -1110,7 +1135,7 @@ void loop()
       Serial.print(" min");
     }
 
-    if (isnan(humidity) || isnan(temperature))
+    if (isnan(humidity) || isnan(temperature) || isnan(airQualityRaw))
     {
       Serial.println(" | Sensor read failed");
     }
@@ -1121,6 +1146,10 @@ void loop()
       Serial.print(" C | Humidity: ");
       Serial.print(humidity, 1);
       Serial.println(" %");
+      Serial.print(" | Air: ");
+      Serial.print(airQualityRaw);
+      Serial.print(" ");
+      Serial.println(airQualityStatus);
     }
   }
 
