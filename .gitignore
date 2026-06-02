@@ -14,3 +14,4 @@ venv/
 *.pyc
 /code-export
 export_code.py
+export_code_batch.py
