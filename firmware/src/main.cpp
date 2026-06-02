@@ -5,56 +5,36 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
 
-#define DHTPIN 4
-#define DHTTYPE DHT22
-
-// LED Server Simulation Pins
-#define GREEN_LED_PIN 23
-#define YELLOW_LED_1_PIN 19
-#define YELLOW_LED_2_PIN 18
-#define RED_LED_1_PIN 17
-#define RED_LED_2_PIN 16
-
-// Power Source Simulation Pins
-#define GRID_SWITCH_PIN 33
-#define GENERATOR_SWITCH_PIN 34
+#include "config.h"
+#include "state.h"
+#include "loads.h"
+#include "power.h"
 
 // Air quality monitoring
-#define MQ135_PIN 35
-
 int airQualityRaw = 0;
 float airQualityVoltage = 0.0;
 String airQualityStatus = "unknown";
 
 // Battery Voltage monitoring
-#define VOLTAGE_SENSOR_PIN 36
 float batteryVoltage = 0.0;
 float batteryPercent = 100.0;
-
-// Voltage sensor calibration
-const float VOLTAGE_DIVIDER_RATIO = 8.21; // changed to align with with multimeter reading
-const float ADC_REFERENCE_VOLTAGE = 3.3;  // ESP32 ADC reference
-const int ADC_MAX = 4095;                 // 12‑bit ADC
-
-const char *WIFI_SSID = "Deld";
-const char *WIFI_PASSWORD = "123123124oq";
-
-const char *DEVICE_NAME = "ServerSensei";
-const char *DEVICE_ID = "serversensei-esp32-001";
-const char *BACKEND_URL = "http://10.46.77.124:8000";
 
 String deviceMode = "monitor";
 String loadState = "normal";
 String powerSource = "unknown";
 
+// Simulated servers states
 bool greenLedState = false;
 bool yellowLed1State = false;
 bool yellowLed2State = false;
 bool redLed1State = false;
 bool redLed2State = false;
 
+// power source states
 bool gridAvailable = false;
 bool generatorAvailable = false;
+bool lastGridState = LOW;
+bool lastGenState = LOW;
 
 float loadPercent = 100.0;
 
@@ -62,336 +42,8 @@ unsigned long lastGridDebounceTime = 0;
 unsigned long lastGenDebounceTime = 0;
 const unsigned long debounceDelay = 50;
 
-bool lastGridState = LOW;
-bool lastGenState = LOW;
-
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);
-
-void applyLEDStates()
-{
-  digitalWrite(GREEN_LED_PIN, greenLedState ? HIGH : LOW);
-  digitalWrite(YELLOW_LED_1_PIN, yellowLed1State ? HIGH : LOW);
-  digitalWrite(YELLOW_LED_2_PIN, yellowLed2State ? HIGH : LOW);
-  digitalWrite(RED_LED_1_PIN, redLed1State ? HIGH : LOW);
-  digitalWrite(RED_LED_2_PIN, redLed2State ? HIGH : LOW);
-}
-
-void updateLoadPercent()
-{
-  if (loadState == "normal")
-  {
-    loadPercent = 100.0;
-  }
-  else if (loadState == "low_runtime")
-  {
-    loadPercent = 60.0;
-  }
-  else if (loadState == "critical_runtime")
-  {
-    loadPercent = 35.0;
-  }
-  else if (loadState == "safe")
-  {
-    loadPercent = 30.0;
-  }
-  else if (loadState == "all_off")
-  {
-    loadPercent = 0.0;
-  }
-  else
-  {
-    loadPercent = 100.0;
-  }
-}
-
-float estimateRuntimeMinutes()
-{
-  if (powerSource != "ups")
-  {
-    return -1;
-  }
-
-  if (batteryPercent <= 0 || loadPercent <= 0)
-  {
-    return -1;
-  }
-
-  return (batteryPercent / loadPercent) * 60.0;
-}
-
-void setLoadState(String newState)
-{
-  loadState = newState;
-
-  if (newState == "normal")
-  {
-    greenLedState = true;
-    yellowLed1State = true;
-    yellowLed2State = true;
-    redLed1State = true;
-    redLed2State = true;
-
-    Serial.println("[Load] Normal state: all simulated servers powered");
-  }
-  else if (newState == "low_runtime")
-  {
-    greenLedState = false;
-    yellowLed1State = false;
-    yellowLed2State = false;
-    redLed1State = true;
-    redLed2State = true;
-
-    Serial.println("[Load] Low runtime: non-critical servers load shed");
-  }
-  else if (newState == "critical_runtime")
-  {
-    greenLedState = false;
-    yellowLed1State = false;
-    yellowLed2State = false;
-    redLed1State = true;
-    redLed2State = false;
-
-    Serial.println("[Load] Critical runtime: only primary critical server active");
-  }
-  else if (newState == "safe")
-  {
-    greenLedState = false;
-    yellowLed1State = false;
-    yellowLed2State = false;
-    redLed1State = true;
-    redLed2State = false;
-
-    Serial.println("[Load] Safe mode: emergency critical-only operation");
-  }
-  else if (newState == "all_off")
-  {
-    greenLedState = false;
-    yellowLed1State = false;
-    yellowLed2State = false;
-    redLed1State = false;
-    redLed2State = false;
-
-    Serial.println("[Load] All simulated loads OFF");
-  }
-  else
-  {
-    Serial.print("[Load] Unknown load state: ");
-    Serial.println(newState);
-    return;
-  }
-
-  updateLoadPercent();
-  applyLEDStates();
-}
-
-void readPowerSwitches()
-{
-  bool currentGridState = digitalRead(GRID_SWITCH_PIN);
-  bool currentGenState = digitalRead(GENERATOR_SWITCH_PIN);
-
-  // Debounce Grid button
-  if (currentGridState != lastGridState)
-  {
-    lastGridDebounceTime = millis();
-  }
-
-  if ((millis() - lastGridDebounceTime) > debounceDelay)
-  {
-    if (currentGridState != gridAvailable)
-    {
-      gridAvailable = currentGridState;
-      Serial.print("[Power] Grid state changed to: ");
-      Serial.println(gridAvailable ? "AVAILABLE" : "UNAVAILABLE");
-    }
-  }
-
-  // Debounce Generator button
-  if (currentGenState != lastGenState)
-  {
-    lastGenDebounceTime = millis();
-  }
-
-  if ((millis() - lastGenDebounceTime) > debounceDelay)
-  {
-    if (currentGenState != generatorAvailable)
-    {
-      generatorAvailable = currentGenState;
-      Serial.print("[Power] Generator state changed to: ");
-      Serial.println(generatorAvailable ? "AVAILABLE" : "UNAVAILABLE");
-    }
-  }
-
-  lastGridState = currentGridState;
-  lastGenState = currentGenState;
-
-  String previousPowerSource = powerSource;
-
-  if (gridAvailable)
-  {
-    powerSource = "grid";
-  }
-  else if (generatorAvailable)
-  {
-    powerSource = "generator";
-  }
-  else
-  {
-    powerSource = "ups";
-  }
-
-  if (previousPowerSource != powerSource)
-  {
-    Serial.print("[Power] Source changed from ");
-    Serial.print(previousPowerSource);
-    Serial.print(" to ");
-    Serial.println(powerSource);
-  }
-}
-
-float readBatteryVoltage()
-{
-  const int numSamples = 50;
-  long sum = 0;
-  for (int i = 0; i < numSamples; i++)
-  {
-    sum += analogRead(VOLTAGE_SENSOR_PIN);
-    delay(2); // slightly longer delay
-  }
-  int rawADC = sum / numSamples;
-
-  // Exponential moving average (smooths sudden changes)
-  static float filteredADC = -1;
-  const float alpha = 0.3; // 0-1, higher = more filtering
-  if (filteredADC < 0)
-    filteredADC = rawADC;
-  filteredADC = alpha * rawADC + (1 - alpha) * filteredADC;
-
-  float sensorOutputVoltage = (filteredADC / (float)ADC_MAX) * ADC_REFERENCE_VOLTAGE;
-
-  static int debugCounter = 0;
-  if (++debugCounter >= 10)
-  {
-    debugCounter = 0;
-    Serial.print("DEBUG: rawADC = ");
-    Serial.print(rawADC);
-    Serial.print(" | filteredADC = ");
-    Serial.print(filteredADC, 0);
-    Serial.print(" | sensorOutputVoltage = ");
-    Serial.print(sensorOutputVoltage, 3);
-    Serial.println(" V");
-  }
-
-  float batteryV = sensorOutputVoltage * VOLTAGE_DIVIDER_RATIO;
-  return batteryV;
-}
-
-void readAirQuality()
-{
-  airQualityRaw = analogRead(MQ135_PIN);
-  airQualityVoltage = (airQualityRaw / 4095.0) * 3.3;
-
-  if (airQualityRaw < 500)
-  {
-    airQualityStatus = "good";
-  }
-  else if (airQualityRaw < 800)
-  {
-    airQualityStatus = "moderate";
-  }
-  else if (airQualityRaw < 1200)
-  {
-    airQualityStatus = "poor";
-  }
-  else
-  {
-    airQualityStatus = "hazardous";
-  }
-}
-
-float voltageToBatteryPercent(float voltage)
-{
-  if (voltage >= 4.20)
-    return 100.0;
-  if (voltage >= 4.10)
-    return 90.0 + (voltage - 4.10) * 100.0;
-  if (voltage >= 4.00)
-    return 80.0 + (voltage - 4.00) * 100.0;
-  if (voltage >= 3.90)
-    return 60.0 + (voltage - 3.90) * 200.0;
-  if (voltage >= 3.80)
-    return 40.0 + (voltage - 3.80) * 200.0;
-  if (voltage >= 3.70)
-    return 20.0 + (voltage - 3.70) * 200.0;
-  if (voltage >= 3.60)
-    return 10.0 + (voltage - 3.60) * 100.0;
-  if (voltage >= 3.50)
-    return 5.0 + (voltage - 3.50) * 50.0;
-  if (voltage >= 3.30)
-    return (voltage - 3.30) * 25.0; // 0‑5% between 3.3V and 3.5V
-  return 0.0;
-}
-
-void applyAutomaticPowerDecision()
-{
-  if (deviceMode != "automatic")
-  {
-    return;
-  }
-
-  if (powerSource == "grid" || powerSource == "generator")
-  {
-    if (loadState != "normal")
-    {
-      setLoadState("normal");
-    }
-
-    return;
-  }
-
-  if (powerSource == "ups")
-  {
-    float runtime = estimateRuntimeMinutes();
-
-    if (runtime > 0 && runtime <= 10.0)
-    {
-      if (loadState != "critical_runtime")
-      {
-        Serial.println("[Decision] Critical UPS runtime detected");
-        setLoadState("critical_runtime");
-      }
-    }
-    else if (runtime > 0 && runtime <= 20.0)
-    {
-      if (loadState != "low_runtime")
-      {
-        Serial.println("[Decision] Low UPS runtime detected");
-        setLoadState("low_runtime");
-      }
-    }
-  }
-}
-
-void updateBatterySimulation()
-{
-  // Read actual battery voltage from sensor
-  batteryVoltage = readBatteryVoltage();
-
-  // Convert voltage to percentage using the mapping
-  batteryPercent = voltageToBatteryPercent(batteryVoltage);
-
-  // Clamp to 0-100% just in case
-  if (batteryPercent < 0)
-    batteryPercent = 0;
-  if (batteryPercent > 100)
-    batteryPercent = 100;
-
-  // Update load percent based on current load state
-  updateLoadPercent();
-
-  // Re‑evaluate automatic decisions (if in automatic mode)
-  applyAutomaticPowerDecision();
-}
 
 void connectToWiFi()
 {
@@ -908,46 +560,6 @@ void sendTelemetryToBackend()
   }
 
   http.end();
-}
-
-// Test each LED one by one
-void testAllLEDs()
-{
-  // All OFF first
-  digitalWrite(GREEN_LED_PIN, LOW);
-  digitalWrite(YELLOW_LED_1_PIN, LOW);
-  digitalWrite(YELLOW_LED_2_PIN, LOW);
-  digitalWrite(RED_LED_1_PIN, LOW);
-  digitalWrite(RED_LED_2_PIN, LOW);
-  delay(1000);
-
-  // Turn each one ON for 1 second
-  Serial.println("Testing Green LED (GPIO23)");
-  digitalWrite(GREEN_LED_PIN, HIGH);
-  delay(1000);
-  digitalWrite(GREEN_LED_PIN, LOW);
-
-  Serial.println("Testing Yellow LED 1 (GPIO19)");
-  digitalWrite(YELLOW_LED_1_PIN, HIGH);
-  delay(1000);
-  digitalWrite(YELLOW_LED_1_PIN, LOW);
-
-  Serial.println("Testing Yellow LED 2 (GPIO18)");
-  digitalWrite(YELLOW_LED_2_PIN, HIGH);
-  delay(1000);
-  digitalWrite(YELLOW_LED_2_PIN, LOW);
-
-  Serial.println("Testing Red LED 1 (GPIO17)");
-  digitalWrite(RED_LED_1_PIN, HIGH);
-  delay(1000);
-  digitalWrite(RED_LED_1_PIN, LOW);
-
-  Serial.println("Testing Red LED 2 (GPIO16)");
-  digitalWrite(RED_LED_2_PIN, HIGH);
-  delay(1000);
-  digitalWrite(RED_LED_2_PIN, LOW);
-
-  Serial.println("LED test complete!");
 }
 
 void setup()
