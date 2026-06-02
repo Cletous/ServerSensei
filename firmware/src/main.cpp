@@ -1062,6 +1062,14 @@ void loop()
 
   unsigned long now = millis();
 
+  static unsigned long lastPowerSwitchRead = 0;
+
+  if (now - lastPowerSwitchRead >= 200)
+  {
+    lastPowerSwitchRead = now;
+    readPowerSwitches();
+  }
+
   if (now - lastPowerUpdate >= 5000)
   {
     lastPowerUpdate = now;
