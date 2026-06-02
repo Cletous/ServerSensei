@@ -78,28 +78,18 @@ float readBatteryVoltage()
 
     int rawADC = sum / numSamples;
 
-    static float filteredADC = -1;
-    const float alpha = 0.3;
+    float sensorOutputVoltage = (rawADC / (float)ADC_MAX) * ADC_REFERENCE_VOLTAGE;
 
-    if (filteredADC < 0)
-        filteredADC = rawADC;
-
-    filteredADC = alpha * rawADC + (1 - alpha) * filteredADC;
-
-    float sensorOutputVoltage = (filteredADC / (float)ADC_MAX) * ADC_REFERENCE_VOLTAGE;
-
-    static int debugCounter = 0;
-    if (++debugCounter >= 10)
-    {
-        debugCounter = 0;
-        Serial.print("DEBUG: rawADC = ");
-        Serial.print(rawADC);
-        Serial.print(" | filteredADC = ");
-        Serial.print(filteredADC, 0);
-        Serial.print(" | sensorOutputVoltage = ");
-        Serial.print(sensorOutputVoltage, 3);
-        Serial.println(" V");
-    }
+    Serial.print("[Battery Debug] rawADC=");
+    Serial.print(rawADC);
+    Serial.print(" | GPIO36 voltage=");
+    Serial.print(sensorOutputVoltage, 3);
+    Serial.print(" V");
+    Serial.print(" | multiplier=");
+    Serial.print(VOLTAGE_DIVIDER_RATIO, 3);
+    Serial.print(" | calculated battery=");
+    Serial.print(sensorOutputVoltage * VOLTAGE_DIVIDER_RATIO, 3);
+    Serial.println(" V");
 
     return sensorOutputVoltage * VOLTAGE_DIVIDER_RATIO;
 }
@@ -132,11 +122,11 @@ void readAirQuality()
     airQualityRaw = analogRead(MQ135_PIN);
     airQualityVoltage = (airQualityRaw / 4095.0) * 3.3;
 
-    if (airQualityRaw < 500)
+    if (airQualityRaw < 2400)
         airQualityStatus = "good";
-    else if (airQualityRaw < 800)
+    else if (airQualityRaw < 2800)
         airQualityStatus = "moderate";
-    else if (airQualityRaw < 1200)
+    else if (airQualityRaw < 3300)
         airQualityStatus = "poor";
     else
         airQualityStatus = "hazardous";

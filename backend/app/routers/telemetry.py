@@ -37,7 +37,9 @@ def receive_telemetry(
     sensor_reading = SensorReading(
         device_id=device.id,
         temperature=request.temperature,
-        humidity=request.humidity
+        humidity=request.humidity,
+        air_quality_raw=request.air_quality_raw,
+        air_quality_status=request.air_quality_status
     )
 
     db.add(sensor_reading)
@@ -109,7 +111,9 @@ def receive_telemetry(
         humidity=request.humidity,
         power_source=request.power_source,
         battery_percent=request.battery_percent,
-        load_percent=request.load_percent
+        load_percent=request.load_percent,
+        air_quality_raw=request.air_quality_raw,
+        air_quality_status=request.air_quality_status
     )
 
     db.commit()

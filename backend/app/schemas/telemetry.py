@@ -13,6 +13,9 @@ class TelemetryRequest(BaseModel):
     battery_percent: float | None = None
     load_percent: float | None = None
 
+    air_quality_raw: int | None = None
+    air_quality_status: str | None = None
+
 class TelemetryResponse(BaseModel):
     message: str
 
@@ -20,6 +23,8 @@ class TelemetryReadingResponse(BaseModel):
     id: int
     temperature: float
     humidity: float
+    air_quality_raw: int | None = None
+    air_quality_status: str | None = None
     created_at: datetime
 
     class Config:

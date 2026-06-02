@@ -15,7 +15,7 @@
 #define MQ135_PIN 35
 #define VOLTAGE_SENSOR_PIN 36
 
-inline constexpr float VOLTAGE_DIVIDER_RATIO = 8.21;
+inline constexpr float VOLTAGE_DIVIDER_RATIO = 1.24;
 inline constexpr float ADC_REFERENCE_VOLTAGE = 3.3;
 inline constexpr int ADC_MAX = 4095;
 

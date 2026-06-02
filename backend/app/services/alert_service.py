@@ -9,6 +9,8 @@ LOW_BATTERY_THRESHOLD = 30.0
 HIGH_LOAD_THRESHOLD = 80.0
 LOW_RUNTIME_THRESHOLD_MINUTES = 20.0
 CRITICAL_RUNTIME_THRESHOLD_MINUTES = 10.0
+POOR_AIR_QUALITY_THRESHOLD = 2800
+HAZARDOUS_AIR_QUALITY_THRESHOLD = 3300
 
 def check_telemetry_alerts(
     db: Session,
@@ -17,7 +19,9 @@ def check_telemetry_alerts(
     humidity: float,
     power_source: str | None = None,
     battery_percent: float | None = None,
-    load_percent: float | None = None
+    load_percent: float | None = None,
+    air_quality_raw: int | None = None,
+    air_quality_status: str | None = None
 ):
     alerts = []
 
@@ -70,6 +74,26 @@ def check_telemetry_alerts(
                 message=f"Load is high: {load_percent}%"
             )
         )
+    
+    if air_quality_raw is not None:
+        if air_quality_raw >= HAZARDOUS_AIR_QUALITY_THRESHOLD:
+            alerts.append(
+                Alert(
+                    device_id=device.id,
+                    alert_type="HAZARDOUS_AIR_QUALITY",
+                    severity="critical",
+                    message=f"Air quality is hazardous: {air_quality_raw} ({air_quality_status})"
+                )
+            )
+        elif air_quality_raw >= POOR_AIR_QUALITY_THRESHOLD:
+            alerts.append(
+                Alert(
+                    device_id=device.id,
+                    alert_type="POOR_AIR_QUALITY",
+                    severity="warning",
+                    message=f"Air quality is poor: {air_quality_raw} ({air_quality_status})"
+                )
+            )
 
     estimated_runtime = estimate_ups_runtime_minutes(
         power_source=power_source,
