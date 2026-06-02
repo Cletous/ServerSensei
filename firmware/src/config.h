@@ -15,14 +15,13 @@
 #define MQ135_PIN 35
 #define VOLTAGE_SENSOR_PIN 36
 
-// Voltage sensor calibration
-const float VOLTAGE_DIVIDER_RATIO = 8.21; // changed to align with with multimeter reading
-const float ADC_REFERENCE_VOLTAGE = 3.3;  // ESP32 ADC reference
-const int ADC_MAX = 4095;                 // 12‑bit ADC
+inline constexpr float VOLTAGE_DIVIDER_RATIO = 8.21;
+inline constexpr float ADC_REFERENCE_VOLTAGE = 3.3;
+inline constexpr int ADC_MAX = 4095;
 
-const char *WIFI_SSID = "Deld";
-const char *WIFI_PASSWORD = "123123124oq";
+inline constexpr const char *WIFI_SSID = "Deld";
+inline constexpr const char *WIFI_PASSWORD = "123123124oq";
 
-const char *DEVICE_NAME = "ServerSensei";
-const char *DEVICE_ID = "serversensei-esp32-001";
-const char *BACKEND_URL = "http://10.46.77.124:8000";
+inline constexpr const char *DEVICE_NAME = "ServerSensei";
+inline constexpr const char *DEVICE_ID = "serversensei-esp32-001";
+inline constexpr const char *BACKEND_URL = "http://10.46.77.124:8000";
