@@ -949,8 +949,8 @@ void setup()
   pinMode(RED_LED_1_PIN, OUTPUT);
   pinMode(RED_LED_2_PIN, OUTPUT);
 
-  pinMode(GRID_SWITCH_PIN, INPUT_PULLDOWN);
-  pinMode(GENERATOR_SWITCH_PIN, INPUT_PULLDOWN);
+  pinMode(GRID_SWITCH_PIN, INPUT);
+  pinMode(GENERATOR_SWITCH_PIN, INPUT);
 
   // temporary code block
   Serial.println("=== BUTTON DEBUG ===");
