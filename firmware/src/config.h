@@ -25,3 +25,12 @@ inline constexpr const char *WIFI_PASSWORD = "123123124oq";
 inline constexpr const char *DEVICE_NAME = "ServerSensei";
 inline constexpr const char *DEVICE_ID = "serversensei-esp32-001";
 inline constexpr const char *BACKEND_URL = "http://10.46.77.124:8000";
+
+// Simulated UPS runtime engine
+inline constexpr bool USE_SIMULATED_UPS_BATTERY = true;
+inline constexpr float DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD = 120.0; // Demo target: full battery drains in about 2 minutes at 100% load
+inline constexpr float DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND = 2.0;  // Battery recovery speed when grid or generator is available
+
+// Load shedding thresholds for demo mode
+inline constexpr float LOW_RUNTIME_THRESHOLD_MINUTES = 0.75;      // about 45 seconds
+inline constexpr float CRITICAL_RUNTIME_THRESHOLD_MINUTES = 0.35; // about 21 seconds

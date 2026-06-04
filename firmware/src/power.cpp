@@ -8,8 +8,23 @@ float estimateRuntimeMinutes()
 {
     if (powerSource != "ups")
         return -1;
+
     if (batteryPercent <= 0 || loadPercent <= 0)
         return -1;
+
+    if (USE_SIMULATED_UPS_BATTERY) // if using a simulated UPS battery
+    {
+        // In demo mode, 100% battery at 100% load lasts about 2 minutes.
+        // Lower loadPercent increases runtime naturally.
+        float runtimeSeconds =
+            (batteryPercent / 100.0) *
+            DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD *
+            (100.0 / loadPercent);
+
+        return runtimeSeconds / 60.0;
+    }
+
+    // Original realistic estimate if not using a simulated UPS battery
     return (batteryPercent / loadPercent) * 60.0;
 }
 
@@ -140,7 +155,10 @@ void applyAutomaticPowerDecision()
     if (powerSource == "grid" || powerSource == "generator")
     {
         if (loadState != "normal")
+        {
+            Serial.println("[Decision] Stable power restored, returning to normal load");
             setLoadState("normal");
+        }
 
         return;
     }
@@ -149,7 +167,7 @@ void applyAutomaticPowerDecision()
     {
         float runtime = estimateRuntimeMinutes();
 
-        if (runtime > 0 && runtime <= 10.0)
+        if (runtime > 0 && runtime <= CRITICAL_RUNTIME_THRESHOLD_MINUTES)
         {
             if (loadState != "critical_runtime")
             {
@@ -157,9 +175,9 @@ void applyAutomaticPowerDecision()
                 setLoadState("critical_runtime");
             }
         }
-        else if (runtime > 0 && runtime <= 20.0)
+        else if (runtime > 0 && runtime <= LOW_RUNTIME_THRESHOLD_MINUTES)
         {
-            if (loadState != "low_runtime")
+            if (loadState != "low_runtime" && loadState != "critical_runtime")
             {
                 Serial.println("[Decision] Low UPS runtime detected");
                 setLoadState("low_runtime");
@@ -170,14 +188,75 @@ void applyAutomaticPowerDecision()
 
 void updateBatterySimulation()
 {
-    batteryVoltage = readBatteryVoltage();
-    batteryPercent = voltageToBatteryPercent(batteryVoltage);
+    static unsigned long lastBatteryUpdateTime = 0;
+
+    unsigned long now = millis();
+
+    if (lastBatteryUpdateTime == 0)
+    {
+        lastBatteryUpdateTime = now;
+        return;
+    }
+
+    float elapsedSeconds = (now - lastBatteryUpdateTime) / 1000.0;
+    lastBatteryUpdateTime = now;
+
+    updateLoadPercent();
+
+    if (USE_SIMULATED_UPS_BATTERY)
+    {
+        batteryVoltage = 0.0; // Not using physical voltage
+
+        if (powerSource == "grid" || powerSource == "generator")
+        {
+            if (batteryPercent < 100.0)
+            {
+                batteryPercent += DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND * elapsedSeconds;
+
+                if (batteryPercent > 100.0)
+                    batteryPercent = 100.0;
+
+                Serial.print("[Battery Demo] Charging/recovering: ");
+                Serial.print(batteryPercent, 1);
+                Serial.println("%");
+            }
+        }
+        else if (powerSource == "ups")
+        {
+            if (loadPercent > 0 && batteryPercent > 0)
+            {
+                // At 100% load: 100% battery drains in 120 seconds.
+                // At 60% load: drains slower.
+                // At 35% or 30% load: drains much slower.
+                float drainPercentPerSecond =
+                    (100.0 / DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD) *
+                    (loadPercent / 100.0);
+
+                batteryPercent -= drainPercentPerSecond * elapsedSeconds;
+
+                if (batteryPercent < 0.0)
+                    batteryPercent = 0.0;
+
+                Serial.print("[Battery Demo] UPS drain: ");
+                Serial.print(batteryPercent, 1);
+                Serial.print("% | Load: ");
+                Serial.print(loadPercent, 1);
+                Serial.println("%");
+            }
+        }
+    }
+    else
+    {
+        // Optional old physical voltage reading path
+        batteryVoltage = readBatteryVoltage();
+        batteryPercent = voltageToBatteryPercent(batteryVoltage);
+    }
 
     if (batteryPercent < 0)
         batteryPercent = 0;
+
     if (batteryPercent > 100)
         batteryPercent = 100;
 
-    updateLoadPercent();
     applyAutomaticPowerDecision();
 }

@@ -53,16 +53,12 @@ void setup()
   Serial.begin(115200);
   delay(2000);
 
-  // Calibration check for voltage sensor
-  Serial.println("\n=== Voltage Sensor Calibration ===");
-  float testVoltage = readBatteryVoltage();
-  Serial.print("Raw battery voltage: ");
-  Serial.print(testVoltage, 3);
-  Serial.println(" V");
-  Serial.print("Calculated percentage: ");
-  Serial.println(voltageToBatteryPercent(testVoltage), 1);
-  Serial.println("Compare with multimeter reading at TP4056 B+.");
-  Serial.println("If difference >0.1V, adjust VOLTAGE_DIVIDER_RATIO.\n");
+  // Simulated UPS Runtime Engine
+  Serial.println("\n=== Simulated UPS Runtime Engine ===");
+  Serial.println("ESP32 remains powered by USB.");
+  Serial.println("Grid/Generator GPIO inputs decide power source.");
+  Serial.println("UPS battery percentage is simulated in firmware.");
+  Serial.println("Physical battery voltage monitoring is optional for this milestone.\n");
 
   Serial.println("==================================");
   Serial.println("ServerSensei");
@@ -166,6 +162,12 @@ void loop()
       batteryPercent = 20;
       Serial.println("→ Battery set to 20%");
     }
+    else if (cmd == "demo reset")
+    {
+      batteryPercent = 100;
+      setLoadState("normal");
+      Serial.println("→ Demo reset: battery 100%, load state normal");
+    }
     else if (cmd == "help")
     {
       Serial.println("\n=== COMMANDS ===");
@@ -174,6 +176,7 @@ void loop()
       Serial.println("battery 100, battery 50, battery 20 - Set battery %");
       Serial.println("help - Show this menu");
       Serial.println("================\n");
+      Serial.println("demo reset - Reset battery to 100% and load to normal");
     }
   }
 
