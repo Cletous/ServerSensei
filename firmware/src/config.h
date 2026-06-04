@@ -24,7 +24,7 @@ inline constexpr const char *WIFI_PASSWORD = "123123124oq";
 
 inline constexpr const char *DEVICE_NAME = "ServerSensei";
 inline constexpr const char *DEVICE_ID = "serversensei-esp32-001";
-inline constexpr const char *BACKEND_URL = "http://10.46.77.124:8000";
+inline constexpr const char *BACKEND_URL = "http://10.52.92.124:8000";
 
 // Simulated UPS runtime engine
 inline constexpr bool USE_SIMULATED_UPS_BATTERY = true;

@@ -22,7 +22,7 @@ String airQualityStatus = "unknown";
 float batteryVoltage = 0.0;
 float batteryPercent = 100.0;
 
-String deviceMode = "monitor";
+String deviceMode = "automatic";
 String loadState = "normal";
 String powerSource = "unknown";
 
