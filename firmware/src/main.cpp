@@ -12,6 +12,7 @@
 #include "network.h"
 #include "commands.h"
 #include "telemetry.h"
+#include "oled_dashboard.h"
 
 // Air quality monitoring
 int airQualityRaw = 0;
@@ -68,6 +69,8 @@ void setup()
   Serial.println("==================================");
 
   dht.begin();
+
+  setupOLED();
 
   pinMode(GREEN_LED_PIN, OUTPUT);
   pinMode(YELLOW_LED_1_PIN, OUTPUT);
@@ -186,6 +189,7 @@ void loop()
   static unsigned long lastCommandPoll = 0;
   static unsigned long lastTelemetryUpload = 0;
   static unsigned long lastPowerUpdate = 0;
+  static unsigned long lastOLEDUpdate = 0;
 
   unsigned long now = millis();
 
@@ -200,6 +204,12 @@ void loop()
   // Important: Put the following if statement after the condition if (now - lastPowerSwitchRead >= 200) because even during simulated shutdown, the ESP32 must still keep reading the grid/generator switches
   if (simulatedPowerDepleted && powerSource == "ups")
   {
+    if (now - lastOLEDUpdate >= 2000)
+    {
+      lastOLEDUpdate = now;
+      updateOLED();
+    }
+
     return;
   }
 
@@ -208,6 +218,12 @@ void loop()
     lastPowerUpdate = now;
     updateBatterySimulation();
     readAirQuality();
+  }
+
+  if (now - lastOLEDUpdate >= 2000)
+  {
+    lastOLEDUpdate = now;
+    updateOLED();
   }
 
   if (now - lastPrint >= 5000)

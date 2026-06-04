@@ -9,6 +9,14 @@
 #define RED_LED_1_PIN 17
 #define RED_LED_2_PIN 16
 
+#define OLED_SDA_PIN 21
+#define OLED_SCL_PIN 22
+
+#define OLED_SCREEN_WIDTH 128
+#define OLED_SCREEN_HEIGHT 64
+#define OLED_RESET_PIN -1
+#define OLED_I2C_ADDRESS 0x3C
+
 #define GRID_SWITCH_PIN 33
 #define GENERATOR_SWITCH_PIN 34
 
