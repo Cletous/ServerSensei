@@ -99,8 +99,7 @@ void loop()
 {
   server.handleClient();
 
-  // Add this inside loop() for manual testing via Serial Monitor
-  static String lastCommand = "";
+  // Manual testing via Serial Monitor
   if (Serial.available())
   {
     String cmd = Serial.readStringUntil('\n');
@@ -166,7 +165,7 @@ void loop()
     {
       batteryPercent = 100;
       setLoadState("normal");
-      Serial.println("→ Demo reset: battery 100%, load state normal");
+      Serial.println("Demo reset: battery 100%, load state normal");
     }
     else if (cmd == "help")
     {
@@ -174,9 +173,9 @@ void loop()
       Serial.println("normal, low, critical, safe, off - Change load state");
       Serial.println("mode monitor, mode manual, mode auto - Change device mode");
       Serial.println("battery 100, battery 50, battery 20 - Set battery %");
+      Serial.println("demo reset - Reset battery to 100% and load to normal");
       Serial.println("help - Show this menu");
       Serial.println("================\n");
-      Serial.println("demo reset - Reset battery to 100% and load to normal");
     }
   }
 

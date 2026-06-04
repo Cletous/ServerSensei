@@ -77,6 +77,8 @@ void readPowerSwitches()
         Serial.print(previousPowerSource);
         Serial.print(" to ");
         Serial.println(powerSource);
+
+        applyAutomaticPowerDecision();
     }
 }
 
