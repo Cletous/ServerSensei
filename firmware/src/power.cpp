@@ -77,8 +77,6 @@ void readPowerSwitches()
         Serial.print(previousPowerSource);
         Serial.print(" to ");
         Serial.println(powerSource);
-
-        applyAutomaticPowerDecision();
     }
 }
 
@@ -154,6 +152,14 @@ void applyAutomaticPowerDecision()
     if (deviceMode != "automatic")
         return;
 
+    if (simulatedPowerDepleted)
+    {
+        if (loadState != "all_off")
+            setLoadState("all_off");
+
+        return;
+    }
+
     if (powerSource == "grid" || powerSource == "generator")
     {
         if (loadState != "normal")
@@ -222,6 +228,25 @@ void updateBatterySimulation()
                 Serial.print(batteryPercent, 1);
                 Serial.println("%");
             }
+
+            if (simulatedPowerDepleted)
+            {
+                if (batteryPercent >= DEMO_RESTART_BATTERY_PERCENT)
+                {
+                    simulatedPowerDepleted = false;
+
+                    Serial.println("[Battery Demo] Battery recovered enough. Simulated servers restarting.");
+
+                    if (deviceMode == "automatic")
+                    {
+                        setLoadState("normal");
+                    }
+                }
+                else
+                {
+                    Serial.println("[Battery Demo] Power restored, but battery is still too low to restart simulated servers.");
+                }
+            }
         }
         else if (powerSource == "ups")
         {
@@ -244,6 +269,15 @@ void updateBatterySimulation()
                 Serial.print("% | Load: ");
                 Serial.print(loadPercent, 1);
                 Serial.println("%");
+            }
+
+            if (batteryPercent <= 0.0 && !simulatedPowerDepleted)
+            {
+                batteryPercent = 0.0;
+                simulatedPowerDepleted = true;
+
+                Serial.println("[Battery Demo] UPS battery depleted. Simulated servers shutting down.");
+                setLoadState("all_off");
             }
         }
     }

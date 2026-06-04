@@ -28,8 +28,9 @@ inline constexpr const char *BACKEND_URL = "http://10.52.92.124:8000";
 
 // Simulated UPS runtime engine
 inline constexpr bool USE_SIMULATED_UPS_BATTERY = true;
-inline constexpr float DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD = 120.0; // Demo target: full battery drains in about 2 minutes at 100% load
-inline constexpr float DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND = 2.0;  // Battery recovery speed when grid or generator is available
+inline constexpr float DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD = 120.0;
+inline constexpr float DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND = 2.0;
+inline constexpr float DEMO_RESTART_BATTERY_PERCENT = 10.0;
 
 // Load shedding thresholds for demo mode
 inline constexpr float LOW_RUNTIME_THRESHOLD_MINUTES = 0.75;      // about 45 seconds

@@ -39,6 +39,8 @@ bool generatorAvailable = false;
 bool lastGridState = LOW;
 bool lastGenState = LOW;
 
+bool simulatedPowerDepleted = false;
+
 float loadPercent = 100.0;
 
 unsigned long lastGridDebounceTime = 0;
@@ -164,8 +166,9 @@ void loop()
     else if (cmd == "demo reset")
     {
       batteryPercent = 100;
+      simulatedPowerDepleted = false;
       setLoadState("normal");
-      Serial.println("Demo reset: battery 100%, load state normal");
+      Serial.println("Demo reset: battery 100%, load state normal, simulated power restored");
     }
     else if (cmd == "help")
     {
@@ -192,6 +195,12 @@ void loop()
   {
     lastPowerSwitchRead = now;
     readPowerSwitches();
+  }
+
+  // Important: Put the following if statement after the condition if (now - lastPowerSwitchRead >= 200) because even during simulated shutdown, the ESP32 must still keep reading the grid/generator switches
+  if (simulatedPowerDepleted && powerSource == "ups")
+  {
+    return;
   }
 
   if (now - lastPowerUpdate >= 5000)

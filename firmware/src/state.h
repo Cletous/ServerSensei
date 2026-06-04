@@ -17,6 +17,7 @@ extern bool redLed2State;
 
 extern bool gridAvailable;
 extern bool generatorAvailable;
+extern bool simulatedPowerDepleted;
 
 extern float loadPercent;
 extern float batteryVoltage;
