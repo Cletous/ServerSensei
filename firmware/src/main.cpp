@@ -28,12 +28,10 @@ String deviceMode = "automatic";
 String loadState = "normal";
 String powerSource = "unknown";
 
-// Simulated servers states
-bool greenLedState = false;
-bool yellowLed1State = false;
-bool yellowLed2State = false;
-bool redLed1State = false;
-bool redLed2State = false;
+bool greenLedState = false; // System status LED
+
+// Cooling Fan automation
+bool fanRelayState = false;
 
 // power source states
 bool gridAvailable = false;
@@ -74,10 +72,6 @@ void setup()
   setupOLED();
 
   pinMode(GREEN_LED_PIN, OUTPUT);
-  pinMode(YELLOW_LED_1_PIN, OUTPUT);
-  pinMode(YELLOW_LED_2_PIN, OUTPUT);
-  pinMode(RED_LED_1_PIN, OUTPUT);
-  pinMode(RED_LED_2_PIN, OUTPUT);
 
   pinMode(GRID_SWITCH_PIN, INPUT);
   pinMode(GENERATOR_SWITCH_PIN, INPUT);
@@ -85,8 +79,6 @@ void setup()
   pinMode(MQ135_PIN, INPUT);
 
   setupRelays();
-
-  testAllLEDs();
 
   setLoadState("normal");
   readPowerSwitches();

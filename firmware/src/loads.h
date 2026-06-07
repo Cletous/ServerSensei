@@ -5,4 +5,3 @@
 void applyLEDStates();
 void updateLoadPercent();
 void setLoadState(String newState);
-void testAllLEDs();

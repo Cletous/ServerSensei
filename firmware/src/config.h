@@ -4,10 +4,6 @@
 #define DHTTYPE DHT22
 
 #define GREEN_LED_PIN 23
-#define YELLOW_LED_1_PIN 19
-#define YELLOW_LED_2_PIN 18
-#define RED_LED_1_PIN 17
-#define RED_LED_2_PIN 16
 
 #define OLED_SDA_PIN 21
 #define OLED_SCL_PIN 22

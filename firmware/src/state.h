@@ -10,10 +10,6 @@ extern String loadState;
 extern String powerSource;
 
 extern bool greenLedState;
-extern bool yellowLed1State;
-extern bool yellowLed2State;
-extern bool redLed1State;
-extern bool redLed2State;
 
 extern bool gridAvailable;
 extern bool generatorAvailable;

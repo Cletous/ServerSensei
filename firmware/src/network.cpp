@@ -107,12 +107,18 @@ void handleStatus()
     else
         doc["estimated_runtime_minutes"] = nullptr;
 
-    JsonObject leds = doc["leds"].to<JsonObject>();
-    leds["green_system_healthy"] = greenLedState;
-    leds["yellow_non_critical_a"] = yellowLed1State;
-    leds["yellow_non_critical_b"] = yellowLed2State;
-    leds["red_critical_a"] = redLed1State;
-    leds["red_critical_b"] = redLed2State;
+    doc["system_status_led"] = greenLedState;
+
+    JsonObject relayLoads = doc["relay_loads"].to<JsonObject>();
+    relayLoads["fan"] = false;
+    relayLoads["non_critical_a"] = loadState == "normal";
+    relayLoads["non_critical_b"] = loadState == "normal";
+    relayLoads["critical_a"] = (loadState == "normal" ||
+                                loadState == "low_runtime" ||
+                                loadState == "critical_runtime" ||
+                                loadState == "safe");
+    relayLoads["critical_b"] = (loadState == "normal" ||
+                                loadState == "low_runtime");
 
     String response;
     serializeJson(doc, response);
