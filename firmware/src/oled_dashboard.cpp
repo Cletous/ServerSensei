@@ -48,6 +48,18 @@ String shortMode(String value)
     return value;
 }
 
+String shortPowerSource(String value)
+{
+    if (value == "grid")
+        return "grid";
+    if (value == "generator")
+        return "gen";
+    if (value == "ups")
+        return "ups";
+
+    return value;
+}
+
 void setupOLED()
 {
     Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
@@ -67,11 +79,11 @@ void setupOLED()
     display.setCursor(0, 0);
 
     display.println("ServerSensei");
-    display.println("OLED dashboard");
+    display.println("OLED display");
     display.println("starting...");
     display.display();
 
-    Serial.println("[OLED] Dashboard initialized");
+    Serial.println("Display initialized");
 }
 
 void updateOLED()
@@ -103,14 +115,14 @@ void updateOLED()
         display.print(" Gen:");
         display.println(generatorAvailable ? "ON" : "OFF");
 
-        display.println("Waiting power...");
+        display.println("Waiting for power...");
         display.display();
         return;
     }
 
     if (isnan(temperature) || isnan(humidity))
     {
-        display.println("DHT22 error");
+        display.println("Temp & Hum sensor err");
     }
     else
     {
@@ -129,13 +141,13 @@ void updateOLED()
     display.println(airQualityRaw);
 
     display.print("Pwr:");
-    display.print(powerSource);
+    display.print(shortPowerSource(powerSource));
 
     display.print(" Bat:");
     display.print(batteryPercent, 0);
     display.println("%");
 
-    display.print("Rt:");
+    display.print("R. time:");
     if (runtime > 0)
     {
         display.print(runtime, 1);

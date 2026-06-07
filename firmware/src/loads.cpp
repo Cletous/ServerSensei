@@ -2,6 +2,7 @@
 #include "config.h"
 #include "state.h"
 #include "loads.h"
+#include "relays.h"
 
 void applyLEDStates()
 {
@@ -86,6 +87,7 @@ void setLoadState(String newState)
 
     updateLoadPercent();
     applyLEDStates();
+    applyRelayStates();
 }
 
 void testAllLEDs()

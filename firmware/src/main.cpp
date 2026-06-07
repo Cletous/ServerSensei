@@ -13,6 +13,7 @@
 #include "commands.h"
 #include "telemetry.h"
 #include "oled_dashboard.h"
+#include "relays.h"
 
 // Air quality monitoring
 int airQualityRaw = 0;
@@ -82,6 +83,8 @@ void setup()
   pinMode(GENERATOR_SWITCH_PIN, INPUT);
 
   pinMode(MQ135_PIN, INPUT);
+
+  setupRelays();
 
   testAllLEDs();
 

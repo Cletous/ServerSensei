@@ -17,6 +17,13 @@
 #define OLED_RESET_PIN -1
 #define OLED_I2C_ADDRESS 0x3C
 
+#define FAN_RELAY_PIN 25
+#define NON_CRITICAL_RELAY_A_PIN 26
+#define NON_CRITICAL_RELAY_B_PIN 27
+#define CRITICAL_RELAY_A_PIN 14
+#define CRITICAL_RELAY_B_PIN 13
+#define SPARE_RELAY_PIN 15
+
 #define GRID_SWITCH_PIN 33
 #define GENERATOR_SWITCH_PIN 34
 
@@ -43,3 +50,6 @@ inline constexpr float DEMO_RESTART_BATTERY_PERCENT = 10.0;
 // Load shedding thresholds for demo mode
 inline constexpr float LOW_RUNTIME_THRESHOLD_MINUTES = 0.75;      // about 45 seconds
 inline constexpr float CRITICAL_RUNTIME_THRESHOLD_MINUTES = 0.35; // about 21 seconds
+
+// Relay logic contants
+inline constexpr bool RELAY_ACTIVE_LOW = true;
