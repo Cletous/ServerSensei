@@ -33,7 +33,7 @@ void applyRelayStates()
     if (loadState == "normal")
     {
         setRelayOutputs(
-            false, // fan handled later in Milestone 24
+            fanRelayState,
             true,
             true,
             true,
@@ -43,7 +43,7 @@ void applyRelayStates()
     else if (loadState == "low_runtime")
     {
         setRelayOutputs(
-            false,
+            fanRelayState,
             false,
             false,
             true,
@@ -53,7 +53,7 @@ void applyRelayStates()
     else if (loadState == "critical_runtime")
     {
         setRelayOutputs(
-            false,
+            fanRelayState,
             false,
             false,
             true,
@@ -63,7 +63,7 @@ void applyRelayStates()
     else if (loadState == "safe")
     {
         setRelayOutputs(
-            false,
+            fanRelayState,
             false,
             false,
             true,
@@ -111,4 +111,36 @@ void setupRelays()
         false);
 
     Serial.println("[Relays] Relay outputs initialized");
+}
+
+void controlFan(float temperature)
+{
+    if (isnan(temperature))
+        return;
+
+    if (loadState == "all_off" || simulatedPowerDepleted)
+    {
+        fanRelayState = false;
+        applyRelayStates();
+        return;
+    }
+
+    if (temperature >= FAN_ON_TEMPERATURE)
+    {
+        if (!fanRelayState)
+        {
+            fanRelayState = true;
+            Serial.println("[Fan] Temperature high, fan ON");
+            applyRelayStates();
+        }
+    }
+    else if (temperature <= FAN_OFF_TEMPERATURE)
+    {
+        if (fanRelayState)
+        {
+            fanRelayState = false;
+            Serial.println("[Fan] Temperature normal, fan OFF");
+            applyRelayStates();
+        }
+    }
 }

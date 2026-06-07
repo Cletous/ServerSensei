@@ -49,3 +49,7 @@ inline constexpr float CRITICAL_RUNTIME_THRESHOLD_MINUTES = 0.35; // about 21 se
 
 // Relay logic contants
 inline constexpr bool RELAY_ACTIVE_LOW = true;
+
+// Temperature thresholds
+inline constexpr float FAN_ON_TEMPERATURE = 28.0;
+inline constexpr float FAN_OFF_TEMPERATURE = 24.0;

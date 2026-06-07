@@ -11,6 +11,8 @@ extern String powerSource;
 
 extern bool greenLedState;
 
+extern bool fanRelayState;
+
 extern bool gridAvailable;
 extern bool generatorAvailable;
 extern bool simulatedPowerDepleted;

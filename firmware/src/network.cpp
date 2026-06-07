@@ -110,7 +110,7 @@ void handleStatus()
     doc["system_status_led"] = greenLedState;
 
     JsonObject relayLoads = doc["relay_loads"].to<JsonObject>();
-    relayLoads["fan"] = false;
+    relayLoads["fan"] = fanRelayState;
     relayLoads["non_critical_a"] = loadState == "normal";
     relayLoads["non_critical_b"] = loadState == "normal";
     relayLoads["critical_a"] = (loadState == "normal" ||

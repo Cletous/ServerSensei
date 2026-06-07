@@ -9,3 +9,4 @@ void setRelayOutputs(
     bool criticalAOn,
     bool criticalBOn,
     bool spareOn);
+void controlFan(float temperature);

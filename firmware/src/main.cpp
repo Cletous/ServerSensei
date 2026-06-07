@@ -229,6 +229,8 @@ void loop()
     float temperature = dht.readTemperature();
     float runtime = estimateRuntimeMinutes();
 
+    controlFan(temperature);
+
     Serial.print("[Heartbeat] Wi-Fi: ");
     Serial.print(getWiFiStatus());
     Serial.print(" | Mode: ");
