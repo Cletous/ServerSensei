@@ -46,3 +46,19 @@ export type DecisionEvaluation = {
   latest_telemetry_at: string | null;
   power_updated_at: string | null;
 };
+
+export type CommandResponse = {
+  id: number;
+  device_id: string;
+  action: string;
+  payload: Record<string, unknown> | null;
+  status: string;
+  created_at: string;
+  executed_at: string | null;
+};
+
+export type CommandCreateRequest = {
+  device_id: string;
+  action: string;
+  payload?: Record<string, unknown>;
+};

@@ -12,7 +12,11 @@ import {
 import { router } from "expo-router";
 
 import { clearToken } from "../src/storage/authStorage";
-import { getDecisionEvaluation, getDevices } from "../src/api/client";
+import {
+  createCommand,
+  getDecisionEvaluation,
+  getDevices,
+} from "../src/api/client";
 import type { DecisionEvaluation, Device } from "../src/types/api";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
@@ -20,6 +24,8 @@ const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 export default function DashboardScreen() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [evaluation, setEvaluation] = useState<DecisionEvaluation | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(DEFAULT_DEVICE_ID);
+  const [sendingCommand, setSendingCommand] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,6 +36,7 @@ export default function DashboardScreen() {
       setDevices(deviceList);
 
       const targetDevice =
+        deviceList.find((device) => device.device_id === selectedDeviceId) ||
         deviceList.find((device) => device.device_id === DEFAULT_DEVICE_ID) ||
         deviceList[0];
 
@@ -37,6 +44,8 @@ export default function DashboardScreen() {
         setEvaluation(null);
         return;
       }
+
+      setSelectedDeviceId(targetDevice.device_id);
 
       const decisionData = await getDecisionEvaluation(targetDevice.device_id);
       setEvaluation(decisionData);
@@ -59,6 +68,49 @@ export default function DashboardScreen() {
   async function handleLogout() {
     await clearToken();
     router.replace("/login");
+  }
+
+  async function sendCommand(
+    action: string,
+    payload?: Record<string, unknown>,
+  ) {
+    try {
+      setSendingCommand(true);
+
+      await createCommand({
+        device_id: selectedDeviceId,
+        action,
+        payload,
+      });
+
+      Alert.alert(
+        "Command queued",
+        "The command has been sent to the backend. The ESP32 will execute it on its next command poll.",
+      );
+
+      await loadDashboard();
+    } catch (error) {
+      Alert.alert(
+        "Command failed",
+        "Could not send command. Check your login, backend, and device registration.",
+      );
+    } finally {
+      setSendingCommand(false);
+    }
+  }
+
+  async function setDeviceMode(mode: string) {
+    await sendCommand("set_mode", { mode });
+  }
+
+  async function setLoadState(state: string) {
+    await sendCommand("set_load_state", { state });
+  }
+
+  async function setBatteryPercent(batteryPercent: number) {
+    await sendCommand("set_battery_percent", {
+      battery_percent: batteryPercent,
+    });
   }
 
   useEffect(() => {
@@ -182,6 +234,86 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.card}>
+            <Text style={styles.cardTitle}>Remote Commands</Text>
+            <Text style={styles.muted}>
+              Commands are queued on the backend and executed when the ESP32
+              polls for pending commands.
+            </Text>
+
+            <Text style={styles.commandSectionTitle}>Device Mode</Text>
+            <View style={styles.commandGrid}>
+              <CommandButton
+                label="Monitor"
+                disabled={sendingCommand}
+                onPress={() => setDeviceMode("monitor")}
+              />
+              <CommandButton
+                label="Manual"
+                disabled={sendingCommand}
+                onPress={() => setDeviceMode("manual")}
+              />
+              <CommandButton
+                label="Automatic"
+                disabled={sendingCommand}
+                onPress={() => setDeviceMode("automatic")}
+              />
+              <CommandButton
+                label="Safe"
+                disabled={sendingCommand}
+                onPress={() => setDeviceMode("safe")}
+              />
+            </View>
+
+            <Text style={styles.commandSectionTitle}>Load State</Text>
+            <View style={styles.commandGrid}>
+              <CommandButton
+                label="Normal"
+                disabled={sendingCommand}
+                onPress={() => setLoadState("normal")}
+              />
+              <CommandButton
+                label="Low Runtime"
+                disabled={sendingCommand}
+                onPress={() => setLoadState("low_runtime")}
+              />
+              <CommandButton
+                label="Critical"
+                disabled={sendingCommand}
+                onPress={() => setLoadState("critical_runtime")}
+              />
+              <CommandButton
+                label="Safe Load"
+                disabled={sendingCommand}
+                onPress={() => setLoadState("safe")}
+              />
+              <CommandButton
+                label="All Off"
+                disabled={sendingCommand}
+                onPress={() => setLoadState("all_off")}
+              />
+            </View>
+
+            <Text style={styles.commandSectionTitle}>Battery Simulation</Text>
+            <View style={styles.commandGrid}>
+              <CommandButton
+                label="Battery 100%"
+                disabled={sendingCommand}
+                onPress={() => setBatteryPercent(100)}
+              />
+              <CommandButton
+                label="Battery 50%"
+                disabled={sendingCommand}
+                onPress={() => setBatteryPercent(50)}
+              />
+              <CommandButton
+                label="Battery 20%"
+                disabled={sendingCommand}
+                onPress={() => setBatteryPercent(20)}
+              />
+            </View>
+          </View>
+
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>Recent Alerts</Text>
             <Text style={styles.muted}>
               Count: {evaluation.alert_count_recent} | Highest:{" "}
@@ -235,6 +367,26 @@ function StatusPill({
     <View style={[styles.pill, styles[`pill_${tone}`]]}>
       <Text style={styles.pillText}>{label}</Text>
     </View>
+  );
+}
+
+function CommandButton({
+  label,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[styles.commandButton, disabled && styles.commandButtonDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text style={styles.commandButtonText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -392,5 +544,29 @@ const styles = StyleSheet.create({
   },
   alertType: {
     fontWeight: "800",
+  },
+  commandSectionTitle: {
+    fontWeight: "800",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  commandGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  commandButton: {
+    backgroundColor: "#111827",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  commandButtonDisabled: {
+    opacity: 0.6,
+  },
+  commandButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
   },
 });

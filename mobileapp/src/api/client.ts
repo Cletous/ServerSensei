@@ -2,7 +2,13 @@ import axios from "axios";
 
 import { API_BASE_URL } from "../config/api";
 import { getToken } from "../storage/authStorage";
-import type { DecisionEvaluation, Device, LoginResponse } from "../types/api";
+import type {
+  CommandCreateRequest,
+  CommandResponse,
+  DecisionEvaluation,
+  Device,
+  LoginResponse,
+} from "../types/api";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -43,5 +49,12 @@ export async function getDecisionEvaluation(
     `/devices/${deviceId}/decision/evaluation`
   );
 
+  return response.data;
+}
+
+export async function createCommand(
+  command: CommandCreateRequest
+): Promise<CommandResponse> {
+  const response = await apiClient.post<CommandResponse>("/commands", command);
   return response.data;
 }
