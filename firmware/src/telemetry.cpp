@@ -7,6 +7,7 @@
 #include "state.h"
 #include "network.h"
 #include "telemetry.h"
+#include "runtime_config.h"
 
 void sendTelemetryToBackend()
 {
@@ -27,7 +28,7 @@ void sendTelemetryToBackend()
 
     HTTPClient http;
 
-    String url = String(BACKEND_URL) + "/telemetry";
+    String url = runtimeBackendUrl + "/telemetry";
 
     JsonDocument doc;
 

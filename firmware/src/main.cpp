@@ -14,6 +14,7 @@
 #include "telemetry.h"
 #include "oled_dashboard.h"
 #include "relays.h"
+#include "runtime_config.h"
 
 // Air quality monitoring
 int airQualityRaw = 0;
@@ -47,6 +48,22 @@ unsigned long lastGridDebounceTime = 0;
 unsigned long lastGenDebounceTime = 0;
 const unsigned long debounceDelay = 50;
 
+String runtimeWifiSsid = "";
+String runtimeWifiPassword = "";
+String runtimeBackendUrl = "";
+
+float fanOnTemperature = DEFAULT_FAN_ON_TEMPERATURE;
+float fanOffTemperature = DEFAULT_FAN_OFF_TEMPERATURE;
+
+float lowRuntimeThresholdMinutes = DEFAULT_LOW_RUNTIME_THRESHOLD_MINUTES;
+float criticalRuntimeThresholdMinutes = DEFAULT_CRITICAL_RUNTIME_THRESHOLD_MINUTES;
+
+float demoUpsFullDrainSecondsAt100Load = DEFAULT_DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD;
+float demoBatteryRecoveryPercentPerSecond = DEFAULT_DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND;
+float demoRestartBatteryPercent = DEFAULT_DEMO_RESTART_BATTERY_PERCENT;
+
+int runtimeSettingsVersion = 0;
+
 DHT dht(DHTPIN, DHTTYPE);
 WebServer server(80);
 
@@ -54,6 +71,9 @@ void setup()
 {
   Serial.begin(115200);
   delay(2000);
+
+  loadLocalRuntimeConfig();
+  printRuntimeConfig();
 
   // Simulated UPS Runtime Engine
   Serial.println("\n=== Simulated UPS Runtime Engine ===");
@@ -84,6 +104,7 @@ void setup()
   readPowerSwitches();
 
   connectToWiFi();
+  pollBackendRuntimeSettings();
   setupRoutes();
 
   server.begin();
@@ -185,6 +206,7 @@ void loop()
   static unsigned long lastTelemetryUpload = 0;
   static unsigned long lastPowerUpdate = 0;
   static unsigned long lastOLEDUpdate = 0;
+  static unsigned long lastSettingsPoll = 0;
 
   unsigned long now = millis();
 
@@ -279,6 +301,12 @@ void loop()
   {
     lastCommandPoll = now;
     pollPendingCommands();
+  }
+
+  if (now - lastSettingsPoll >= 10000)
+  {
+    lastSettingsPoll = now;
+    pollBackendRuntimeSettings();
   }
 
   if (now - lastTelemetryUpload >= 10000)

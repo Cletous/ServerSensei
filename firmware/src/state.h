@@ -34,3 +34,20 @@ extern bool lastGenState;
 
 extern DHT dht;
 extern WebServer server;
+
+// Runtime variables
+extern String runtimeWifiSsid;
+extern String runtimeWifiPassword;
+extern String runtimeBackendUrl;
+
+extern float fanOnTemperature;
+extern float fanOffTemperature;
+
+extern float lowRuntimeThresholdMinutes;
+extern float criticalRuntimeThresholdMinutes;
+
+extern float demoUpsFullDrainSecondsAt100Load;
+extern float demoBatteryRecoveryPercentPerSecond;
+extern float demoRestartBatteryPercent;
+
+extern int runtimeSettingsVersion;

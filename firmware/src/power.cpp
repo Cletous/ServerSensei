@@ -18,7 +18,7 @@ float estimateRuntimeMinutes()
         // Lower loadPercent increases runtime naturally.
         float runtimeSeconds =
             (batteryPercent / 100.0) *
-            DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD *
+            demoUpsFullDrainSecondsAt100Load *
             (100.0 / loadPercent);
 
         return runtimeSeconds / 60.0;
@@ -175,7 +175,7 @@ void applyAutomaticPowerDecision()
     {
         float runtime = estimateRuntimeMinutes();
 
-        if (runtime > 0 && runtime <= CRITICAL_RUNTIME_THRESHOLD_MINUTES)
+        if (runtime > 0 && runtime <= criticalRuntimeThresholdMinutes)
         {
             if (loadState != "critical_runtime")
             {
@@ -183,7 +183,7 @@ void applyAutomaticPowerDecision()
                 setLoadState("critical_runtime");
             }
         }
-        else if (runtime > 0 && runtime <= LOW_RUNTIME_THRESHOLD_MINUTES)
+        else if (runtime > 0 && runtime <= lowRuntimeThresholdMinutes)
         {
             if (loadState != "low_runtime" && loadState != "critical_runtime")
             {
@@ -219,7 +219,7 @@ void updateBatterySimulation()
         {
             if (batteryPercent < 100.0)
             {
-                batteryPercent += DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND * elapsedSeconds;
+                batteryPercent += demoBatteryRecoveryPercentPerSecond * elapsedSeconds;
 
                 if (batteryPercent > 100.0)
                     batteryPercent = 100.0;
@@ -231,7 +231,7 @@ void updateBatterySimulation()
 
             if (simulatedPowerDepleted)
             {
-                if (batteryPercent >= DEMO_RESTART_BATTERY_PERCENT)
+                if (batteryPercent >= demoRestartBatteryPercent)
                 {
                     simulatedPowerDepleted = false;
 
@@ -256,7 +256,7 @@ void updateBatterySimulation()
                 // At 60% load: drains slower.
                 // At 35% or 30% load: drains much slower.
                 float drainPercentPerSecond =
-                    (100.0 / DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD) *
+                    (100.0 / demoUpsFullDrainSecondsAt100Load) *
                     (loadPercent / 100.0);
 
                 batteryPercent -= drainPercentPerSecond * elapsedSeconds;

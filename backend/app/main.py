@@ -1,8 +1,17 @@
 from fastapi import FastAPI
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.models import user, device, sensor_reading, device_status, command, alert, power_status
-from app.routers import alerts, auth, commands, devices, power, telemetry
+from app.models import (
+    user,
+    device,
+    sensor_reading,
+    device_status,
+    command,
+    alert,
+    power_status,
+    device_setting,
+)
+from app.routers import alerts, auth, commands, devices, power, telemetry, settings
 
 Base.metadata.create_all(bind=engine)
 
@@ -31,3 +40,4 @@ app.include_router(devices.router)
 app.include_router(power.router)
 app.include_router(telemetry.router)
 app.include_router(commands.router)
+app.include_router(settings.router)

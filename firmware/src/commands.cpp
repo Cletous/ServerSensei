@@ -7,6 +7,7 @@
 #include "state.h"
 #include "loads.h"
 #include "commands.h"
+#include "runtime_config.h"
 
 void reportCommandResult(int commandId, String status, String message)
 {
@@ -18,7 +19,7 @@ void reportCommandResult(int commandId, String status, String message)
 
     HTTPClient http;
 
-    String url = String(BACKEND_URL) + "/commands/" + String(commandId) + "/result";
+    String url = runtimeBackendUrl + "/commands/" + String(commandId) + "/result";
 
     JsonDocument doc;
     doc["status"] = status;
@@ -236,7 +237,7 @@ void pollPendingCommands()
 
     HTTPClient http;
 
-    String url = String(BACKEND_URL) + "/devices/" + String(DEVICE_ID) + "/commands/pending";
+    String url = runtimeBackendUrl + "/devices/" + String(DEVICE_ID) + "/commands/pending";
 
     Serial.print("[Commands] Polling: ");
     Serial.println(url);

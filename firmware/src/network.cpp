@@ -7,13 +7,14 @@
 #include "state.h"
 #include "power.h"
 #include "network.h"
+#include "runtime_config.h"
 
 void connectToWiFi()
 {
     Serial.print("Connecting to Wi-Fi");
 
     WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.begin(runtimeWifiSsid.c_str(), runtimeWifiPassword.c_str());
 
     int attempts = 0;
 
@@ -126,6 +127,71 @@ void handleStatus()
     server.send(200, "application/json", response);
 }
 
+void handleGetLocalConfig()
+{
+    JsonDocument doc;
+
+    doc["device_id"] = DEVICE_ID;
+    doc["wifi_ssid"] = runtimeWifiSsid;
+    doc["backend_url"] = runtimeBackendUrl;
+
+    doc["fan_on_temperature"] = fanOnTemperature;
+    doc["fan_off_temperature"] = fanOffTemperature;
+    doc["low_runtime_threshold_minutes"] = lowRuntimeThresholdMinutes;
+    doc["critical_runtime_threshold_minutes"] = criticalRuntimeThresholdMinutes;
+    doc["settings_version"] = runtimeSettingsVersion;
+
+    String response;
+    serializeJson(doc, response);
+
+    server.send(200, "application/json", response);
+}
+
+void handleUpdateLocalConfig()
+{
+    if (!server.hasArg("plain"))
+    {
+        server.send(400, "application/json", "{\"error\":\"Missing JSON body\"}");
+        return;
+    }
+
+    String body = server.arg("plain");
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error)
+    {
+        server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+
+    if (!doc["wifi_ssid"].isNull() && !doc["wifi_password"].isNull())
+    {
+        String ssid = doc["wifi_ssid"].as<String>();
+        String password = doc["wifi_password"].as<String>();
+
+        saveWiFiRuntimeConfig(ssid, password);
+    }
+
+    if (!doc["backend_url"].isNull())
+    {
+        String backendUrl = doc["backend_url"].as<String>();
+        saveBackendUrlRuntimeConfig(backendUrl);
+    }
+
+    JsonDocument responseDoc;
+
+    responseDoc["message"] = "Local runtime config saved. Restart ESP32 to reconnect with new Wi-Fi/backend settings.";
+    responseDoc["wifi_ssid"] = runtimeWifiSsid;
+    responseDoc["backend_url"] = runtimeBackendUrl;
+
+    String response;
+    serializeJson(responseDoc, response);
+
+    server.send(200, "application/json", response);
+}
+
 void handleNotFound()
 {
     JsonDocument doc;
@@ -142,5 +208,9 @@ void setupRoutes()
     server.on("/health", HTTP_GET, handleHealth);
     server.on("/sensor", HTTP_GET, handleSensor);
     server.on("/status", HTTP_GET, handleStatus);
+
+    server.on("/config", HTTP_GET, handleGetLocalConfig);
+    server.on("/config", HTTP_POST, handleUpdateLocalConfig);
+
     server.onNotFound(handleNotFound);
 }

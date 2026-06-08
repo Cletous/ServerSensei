@@ -125,7 +125,7 @@ void controlFan(float temperature)
         return;
     }
 
-    if (temperature >= FAN_ON_TEMPERATURE)
+    if (temperature >= fanOnTemperature)
     {
         if (!fanRelayState)
         {
@@ -134,7 +134,7 @@ void controlFan(float temperature)
             applyRelayStates();
         }
     }
-    else if (temperature <= FAN_OFF_TEMPERATURE)
+    else if (temperature <= fanOffTemperature)
     {
         if (fanRelayState)
         {

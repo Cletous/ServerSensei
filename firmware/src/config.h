@@ -30,26 +30,27 @@ inline constexpr float VOLTAGE_DIVIDER_RATIO = 1.24;
 inline constexpr float ADC_REFERENCE_VOLTAGE = 3.3;
 inline constexpr int ADC_MAX = 4095;
 
-inline constexpr const char *WIFI_SSID = "Deld";
-inline constexpr const char *WIFI_PASSWORD = "123123124oq";
+// First-boot fallback values that can be changed at runtime without recompiling.
+inline constexpr const char *DEFAULT_WIFI_SSID = "Deld";
+inline constexpr const char *DEFAULT_WIFI_PASSWORD = "123123124oq";
+inline constexpr const char *DEFAULT_BACKEND_URL = "http://10.52.92.124:8000";
 
 inline constexpr const char *DEVICE_NAME = "ServerSensei";
 inline constexpr const char *DEVICE_ID = "serversensei-esp32-001";
-inline constexpr const char *BACKEND_URL = "http://10.52.92.124:8000";
 
 // Simulated UPS runtime engine
 inline constexpr bool USE_SIMULATED_UPS_BATTERY = true;
-inline constexpr float DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD = 120.0;
-inline constexpr float DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND = 2.0;
-inline constexpr float DEMO_RESTART_BATTERY_PERCENT = 10.0;
 
-// Load shedding thresholds for demo mode
-inline constexpr float LOW_RUNTIME_THRESHOLD_MINUTES = 0.75;      // about 45 seconds
-inline constexpr float CRITICAL_RUNTIME_THRESHOLD_MINUTES = 0.35; // about 21 seconds
+// Runtime defaults  loaded into mutable variables at startup.
+inline constexpr float DEFAULT_DEMO_UPS_FULL_DRAIN_SECONDS_AT_100_LOAD = 120.0;
+inline constexpr float DEFAULT_DEMO_BATTERY_RECOVERY_PERCENT_PER_SECOND = 2.0;
+inline constexpr float DEFAULT_DEMO_RESTART_BATTERY_PERCENT = 10.0;
 
-// Relay logic contants
+inline constexpr float DEFAULT_LOW_RUNTIME_THRESHOLD_MINUTES = 0.75;
+inline constexpr float DEFAULT_CRITICAL_RUNTIME_THRESHOLD_MINUTES = 0.35;
+
+inline constexpr float DEFAULT_FAN_ON_TEMPERATURE = 22.5;
+inline constexpr float DEFAULT_FAN_OFF_TEMPERATURE = 22.2;
+
+// Relay logic constants
 inline constexpr bool RELAY_ACTIVE_LOW = true;
-
-// Temperature thresholds
-inline constexpr float FAN_ON_TEMPERATURE = 22.5;
-inline constexpr float FAN_OFF_TEMPERATURE = 22.2;
