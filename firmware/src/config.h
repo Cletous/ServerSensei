@@ -54,3 +54,7 @@ inline constexpr float DEFAULT_FAN_OFF_TEMPERATURE = 22.2;
 
 // Relay logic constants
 inline constexpr bool RELAY_ACTIVE_LOW = true;
+
+// Local ESP32 configuration page login
+inline constexpr const char *CONFIG_PAGE_USERNAME = "admin";
+inline constexpr const char *CONFIG_PAGE_PASSWORD = "Pass@123";

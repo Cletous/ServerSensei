@@ -8,7 +8,10 @@ String getWiFiStatus();
 void handleHealth();
 void handleSensor();
 void handleStatus();
+
+bool requireConfigLogin();
 void handleGetLocalConfig();
 void handleUpdateLocalConfig();
+
 void handleNotFound();
 void setupRoutes();

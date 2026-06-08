@@ -127,69 +127,159 @@ void handleStatus()
     server.send(200, "application/json", response);
 }
 
+bool requireConfigLogin()
+{
+    if (!server.authenticate(CONFIG_PAGE_USERNAME, CONFIG_PAGE_PASSWORD))
+    {
+        server.requestAuthentication();
+        return false;
+    }
+
+    return true;
+}
+
 void handleGetLocalConfig()
 {
-    JsonDocument doc;
+    if (!requireConfigLogin())
+        return;
 
-    doc["device_id"] = DEVICE_ID;
-    doc["wifi_ssid"] = runtimeWifiSsid;
-    doc["backend_url"] = runtimeBackendUrl;
+    String html = "";
 
-    doc["fan_on_temperature"] = fanOnTemperature;
-    doc["fan_off_temperature"] = fanOffTemperature;
-    doc["low_runtime_threshold_minutes"] = lowRuntimeThresholdMinutes;
-    doc["critical_runtime_threshold_minutes"] = criticalRuntimeThresholdMinutes;
-    doc["settings_version"] = runtimeSettingsVersion;
+    html += "<!DOCTYPE html>";
+    html += "<html>";
+    html += "<head>";
+    html += "<title>ServerSensei Config</title>";
+    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<style>";
+    html += "body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px;}";
+    html += ".card{max-width:480px;margin:auto;background:white;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);}";
+    html += "h2{margin-top:0;color:#222;}";
+    html += "label{font-weight:bold;display:block;margin-top:14px;}";
+    html += "input{width:100%;padding:10px;margin-top:6px;box-sizing:border-box;}";
+    html += "button{width:100%;padding:12px;margin-top:20px;background:#222;color:white;border:0;border-radius:6px;font-size:16px;}";
+    html += ".note{font-size:13px;color:#555;margin-top:15px;}";
+    html += ".value{background:#eee;padding:10px;border-radius:6px;margin-top:6px;}";
+    html += "</style>";
+    html += "</head>";
+    html += "<body>";
+    html += "<div class='card'>";
+    html += "<h2>ServerSensei ESP32 Config</h2>";
 
-    String response;
-    serializeJson(doc, response);
+    html += "<p><b>Device ID:</b></p>";
+    html += "<div class='value'>";
+    html += DEVICE_ID;
+    html += "</div>";
 
-    server.send(200, "application/json", response);
+    html += "<form method='POST' action='/config'>";
+
+    html += "<label>WiFi SSID</label>";
+    html += "<input name='wifi_ssid' value='";
+    html += runtimeWifiSsid;
+    html += "' required>";
+
+    html += "<label>WiFi Password</label>";
+    html += "<input name='wifi_password' type='password' placeholder='Leave blank to keep current password'>";
+
+    html += "<label>Backend URL</label>";
+    html += "<input name='backend_url' value='";
+    html += runtimeBackendUrl;
+    html += "' required>";
+
+    html += "<button type='submit'>Save Configuration</button>";
+    html += "</form>";
+
+    html += "<p class='note'>";
+    html += "After changing WiFi or Backend URL, restart the ESP32. ";
+    html += "Runtime thresholds such as fan temperature and UPS settings are managed from the backend.";
+    html += "</p>";
+
+    html += "<hr>";
+
+    html += "<p><b>Current Runtime Settings</b></p>";
+
+    html += "<p>Fan ON Temperature: ";
+    html += String(fanOnTemperature);
+    html += " C</p>";
+
+    html += "<p>Fan OFF Temperature: ";
+    html += String(fanOffTemperature);
+    html += " C</p>";
+
+    html += "<p>Low Runtime Threshold: ";
+    html += String(lowRuntimeThresholdMinutes);
+    html += " min</p>";
+
+    html += "<p>Critical Runtime Threshold: ";
+    html += String(criticalRuntimeThresholdMinutes);
+    html += " min</p>";
+
+    html += "<p>Settings Version: ";
+    html += String(runtimeSettingsVersion);
+    html += "</p>";
+
+    html += "</div>";
+    html += "</body>";
+    html += "</html>";
+
+    server.send(200, "text/html", html);
 }
 
 void handleUpdateLocalConfig()
 {
-    if (!server.hasArg("plain"))
-    {
-        server.send(400, "application/json", "{\"error\":\"Missing JSON body\"}");
+    if (!requireConfigLogin())
         return;
+
+    String ssid = server.arg("wifi_ssid");
+    String password = server.arg("wifi_password");
+    String backendUrl = server.arg("backend_url");
+
+    if (ssid.length() > 0)
+    {
+        if (password.length() > 0)
+        {
+            saveWiFiRuntimeConfig(ssid, password);
+        }
+        else
+        {
+            saveWiFiRuntimeConfig(ssid, runtimeWifiPassword);
+        }
     }
 
-    String body = server.arg("plain");
-
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, body);
-
-    if (error)
+    if (backendUrl.length() > 0)
     {
-        server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
-        return;
-    }
-
-    if (!doc["wifi_ssid"].isNull() && !doc["wifi_password"].isNull())
-    {
-        String ssid = doc["wifi_ssid"].as<String>();
-        String password = doc["wifi_password"].as<String>();
-
-        saveWiFiRuntimeConfig(ssid, password);
-    }
-
-    if (!doc["backend_url"].isNull())
-    {
-        String backendUrl = doc["backend_url"].as<String>();
         saveBackendUrlRuntimeConfig(backendUrl);
     }
 
-    JsonDocument responseDoc;
+    String html = "";
 
-    responseDoc["message"] = "Local runtime config saved. Restart ESP32 to reconnect with new Wi-Fi/backend settings.";
-    responseDoc["wifi_ssid"] = runtimeWifiSsid;
-    responseDoc["backend_url"] = runtimeBackendUrl;
+    html += "<!DOCTYPE html>";
+    html += "<html>";
+    html += "<head>";
+    html += "<title>ServerSensei Config Saved</title>";
+    html += "<meta name='viewport' content='width=device-width, initial-scale=1'>";
+    html += "<style>";
+    html += "body{font-family:Arial;background:#f2f2f2;margin:0;padding:20px;}";
+    html += ".card{max-width:480px;margin:auto;background:white;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);}";
+    html += "a{display:block;margin-top:20px;}";
+    html += "</style>";
+    html += "</head>";
+    html += "<body>";
+    html += "<div class='card'>";
+    html += "<h2>Configuration Saved</h2>";
+    html += "<p>The ESP32 local configuration has been saved to Preferences/NVS.</p>";
+    html += "<p><b>Restart the ESP32</b> if you changed WiFi or Backend URL.</p>";
+    html += "<p><b>WiFi SSID:</b> ";
+    html += runtimeWifiSsid;
+    html += "</p>";
+    html += "<p><b>Backend URL:</b> ";
+    html += runtimeBackendUrl;
+    html += "</p>";
+    html += "<a href='/config'>Back to Config Page</a>";
+    html += "</div>";
+    html += "</body>";
+    html += "</html>";
 
-    String response;
-    serializeJson(responseDoc, response);
-
-    server.send(200, "application/json", response);
+    server.send(200, "text/html", html);
 }
 
 void handleNotFound()
