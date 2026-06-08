@@ -16,6 +16,9 @@ class TelemetryRequest(BaseModel):
     air_quality_raw: int | None = None
     air_quality_status: str | None = None
 
+    environmental_risk: str | None = None
+    system_recommendation: str | None = None
+
 class TelemetryResponse(BaseModel):
     message: str
 
@@ -23,8 +26,13 @@ class TelemetryReadingResponse(BaseModel):
     id: int
     temperature: float
     humidity: float
+
     air_quality_raw: int | None = None
     air_quality_status: str | None = None
+
+    environmental_risk: str | None = None
+    system_recommendation: str | None = None
+
     created_at: datetime
 
     class Config:

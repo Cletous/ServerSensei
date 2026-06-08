@@ -39,7 +39,9 @@ def receive_telemetry(
         temperature=request.temperature,
         humidity=request.humidity,
         air_quality_raw=request.air_quality_raw,
-        air_quality_status=request.air_quality_status
+        air_quality_status=request.air_quality_status,
+        environmental_risk=request.environmental_risk,
+        system_recommendation=request.system_recommendation
     )
 
     db.add(sensor_reading)

@@ -20,6 +20,9 @@ class SensorReading(Base):
     air_quality_raw = Column(Integer, nullable=True)
     air_quality_status = Column(String(50), nullable=True)
 
+    environmental_risk = Column(String(50), nullable=True)
+    system_recommendation = Column(String(255), nullable=True)
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()

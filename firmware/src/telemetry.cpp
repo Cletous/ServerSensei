@@ -47,6 +47,10 @@ void sendTelemetryToBackend()
     doc["air_quality_raw"] = airQualityRaw;
     doc["air_quality_status"] = airQualityStatus;
 
+    // Enhanced decision engine values
+    doc["environmental_risk"] = environmentalRisk;
+    doc["system_recommendation"] = systemRecommendation;
+
     String requestBody;
     serializeJson(doc, requestBody);
 
