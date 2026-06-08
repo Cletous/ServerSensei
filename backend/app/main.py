@@ -1,5 +1,6 @@
 from fastapi import FastAPI
-from app.core.config import settings
+
+from app.core.config import settings as app_settings
 from app.core.database import Base, engine
 from app.models import (
     user,
@@ -11,20 +12,21 @@ from app.models import (
     power_status,
     device_setting,
 )
-from app.routers import alerts, auth, commands, devices, power, telemetry, settings
+from app.routers import alerts, auth, commands, devices, power, telemetry
+from app.routers import settings as settings_router
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION
+    title=app_settings.APP_NAME,
+    version=app_settings.APP_VERSION
 )
 
 @app.get("/")
 def root():
     return {
         "message": "ServerSensei Backend is running",
-        "version": settings.APP_VERSION
+        "version": app_settings.APP_VERSION
     }
 
 @app.get("/health")
@@ -40,4 +42,4 @@ app.include_router(devices.router)
 app.include_router(power.router)
 app.include_router(telemetry.router)
 app.include_router(commands.router)
-app.include_router(settings.router)
+app.include_router(settings_router.router)
