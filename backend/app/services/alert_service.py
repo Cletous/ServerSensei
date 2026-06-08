@@ -1,4 +1,7 @@
+from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session
+
 from app.models.alert import Alert
 from app.models.device import Device
 from app.services.power_prediction_service import estimate_ups_runtime_minutes
@@ -9,9 +12,27 @@ LOW_BATTERY_THRESHOLD = 30.0
 HIGH_LOAD_THRESHOLD = 80.0
 LOW_RUNTIME_THRESHOLD_MINUTES = 20.0
 CRITICAL_RUNTIME_THRESHOLD_MINUTES = 10.0
-POOR_AIR_QUALITY_THRESHOLD = 2800
-HAZARDOUS_AIR_QUALITY_THRESHOLD = 3300
+POOR_AIR_QUALITY_THRESHOLD = 1000
+HAZARDOUS_AIR_QUALITY_THRESHOLD = 1500
 
+ALERT_DEDUP_MINUTES = 2
+
+def alert_exists_recently(
+    db: Session,
+    device_id: int,
+    alert_type: str,
+    minutes: int = ALERT_DEDUP_MINUTES
+) -> bool:
+    cutoff_time = datetime.now() - timedelta(minutes=minutes)
+
+    existing_alert = db.query(Alert).filter(
+        Alert.device_id == device_id,
+        Alert.alert_type == alert_type,
+        Alert.created_at >= cutoff_time
+    ).first()
+
+    return existing_alert is not None
+    
 def check_telemetry_alerts(
     db: Session,
     device: Device,
@@ -165,7 +186,17 @@ def check_telemetry_alerts(
             )
         )
 
-    for alert in alerts:
-        db.add(alert)
+    new_alerts = []
 
-    return alerts
+    for alert in alerts:
+        if alert_exists_recently(
+            db=db,
+            device_id=device.id,
+            alert_type=alert.alert_type
+        ):
+            continue
+
+        db.add(alert)
+        new_alerts.append(alert)
+
+    return new_alerts
