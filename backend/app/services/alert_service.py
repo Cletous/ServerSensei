@@ -21,7 +21,9 @@ def check_telemetry_alerts(
     battery_percent: float | None = None,
     load_percent: float | None = None,
     air_quality_raw: int | None = None,
-    air_quality_status: str | None = None
+    air_quality_status: str | None = None,
+    environmental_risk: str | None = None,
+    system_recommendation: str | None = None
 ):
     alerts = []
 
@@ -120,6 +122,48 @@ def check_telemetry_alerts(
                     message=f"Estimated UPS runtime is low: {estimated_runtime} minutes"
                 )
             )
+
+    if environmental_risk == "high":
+        alerts.append(
+            Alert(
+                device_id=device.id,
+                alert_type="ENVIRONMENTAL_RISK_HIGH",
+                severity="warning",
+                message=(
+                    system_recommendation
+                    or "High environmental risk detected"
+                )
+            )
+        )
+
+    if environmental_risk == "critical":
+        alerts.append(
+            Alert(
+                device_id=device.id,
+                alert_type="ENVIRONMENTAL_RISK_CRITICAL",
+                severity="critical",
+                message=(
+                    system_recommendation
+                    or "Critical environmental risk detected"
+                )
+            )
+        )
+
+    if (
+        power_source == "ups" and
+        environmental_risk in ["high", "critical"]
+    ):
+        alerts.append(
+            Alert(
+                device_id=device.id,
+                alert_type="POWER_ENVIRONMENT_COMBINED_RISK",
+                severity="critical",
+                message=(
+                    "Combined risk: UPS mode and elevated environmental risk detected. "
+                    "Preserve critical services and inspect cooling."
+                )
+            )
+        )
 
     for alert in alerts:
         db.add(alert)

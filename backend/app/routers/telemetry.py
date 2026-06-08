@@ -115,7 +115,9 @@ def receive_telemetry(
         battery_percent=request.battery_percent,
         load_percent=request.load_percent,
         air_quality_raw=request.air_quality_raw,
-        air_quality_status=request.air_quality_status
+        air_quality_status=request.air_quality_status,
+        environmental_risk=request.environmental_risk,
+        system_recommendation=request.system_recommendation
     )
 
     db.commit()
