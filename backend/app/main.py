@@ -12,7 +12,7 @@ from app.models import (
     power_status,
     device_setting,
 )
-from app.routers import alerts, auth, commands, devices, power, telemetry
+from app.routers import alerts, auth, commands, devices, decision, power, telemetry
 from app.routers import settings as settings_router
 
 Base.metadata.create_all(bind=engine)
@@ -43,3 +43,4 @@ app.include_router(power.router)
 app.include_router(telemetry.router)
 app.include_router(commands.router)
 app.include_router(settings_router.router)
+app.include_router(decision.router)
