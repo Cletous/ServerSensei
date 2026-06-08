@@ -20,9 +20,13 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleLogin() {
+    setErrorMessage("");
+
     if (!email || !password) {
+      setErrorMessage("Please enter email and password.");
       Alert.alert("Missing details", "Please enter email and password.");
       return;
     }
@@ -30,11 +34,20 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
+      console.log("Trying login...");
       const response = await loginUser(email.trim(), password);
+
+      console.log("Login successful");
       await saveToken(response.access_token);
 
       router.replace("/dashboard");
     } catch (error) {
+      console.log("Login error:", error);
+
+      setErrorMessage(
+        "Login failed. Check your email, password, backend URL, and backend server.",
+      );
+
       Alert.alert(
         "Login failed",
         "Check your email, password, backend URL, and network connection.",
@@ -71,6 +84,10 @@ export default function LoginScreen() {
           secureTextEntry
           style={styles.input}
         />
+
+        {errorMessage ? (
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        ) : null}
 
         <Pressable
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -138,5 +155,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "700",
     fontSize: 16,
+  },
+  errorText: {
+    color: "#b91c1c",
+    marginTop: 12,
+    fontWeight: "600",
   },
 });
