@@ -15,6 +15,7 @@
 #include "oled_dashboard.h"
 #include "relays.h"
 #include "runtime_config.h"
+#include "decision_engine.h"
 
 // Air quality monitoring
 int airQualityRaw = 0;
@@ -28,6 +29,9 @@ float batteryPercent = 100.0;
 String deviceMode = "automatic";
 String loadState = "normal";
 String powerSource = "unknown";
+
+String environmentalRisk = "normal";
+String systemRecommendation = "System starting. Waiting for sensor data.";
 
 bool greenLedState = false; // System status LED
 
@@ -235,6 +239,7 @@ void loop()
     lastPowerUpdate = now;
     updateBatterySimulation();
     readAirQuality();
+    updateEnhancedDecisionEngine();
   }
 
   if (now - lastOLEDUpdate >= 2000)
@@ -250,8 +255,6 @@ void loop()
     float humidity = dht.readHumidity();
     float temperature = dht.readTemperature();
     float runtime = estimateRuntimeMinutes();
-
-    controlFan(temperature);
 
     Serial.print("[Heartbeat] Wi-Fi: ");
     Serial.print(getWiFiStatus());
@@ -271,6 +274,8 @@ void loop()
     Serial.print("%");
     Serial.print(" | Load state: ");
     Serial.print(loadState);
+    Serial.print(" | Risk: ");
+    Serial.print(environmentalRisk);
 
     if (runtime > 0)
     {
@@ -294,6 +299,8 @@ void loop()
       Serial.print(airQualityRaw);
       Serial.print(" ");
       Serial.println(airQualityStatus);
+      Serial.print("[Recommendation] ");
+      Serial.println(systemRecommendation);
     }
   }
 

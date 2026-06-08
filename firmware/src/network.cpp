@@ -95,6 +95,8 @@ void handleStatus()
     doc["mode"] = deviceMode;
     doc["load_state"] = loadState;
     doc["power_source"] = powerSource;
+    doc["environmental_risk"] = environmentalRisk;
+    doc["system_recommendation"] = systemRecommendation;
     doc["grid_available"] = gridAvailable;
     doc["generator_available"] = generatorAvailable;
     doc["battery_percent"] = batteryPercent;

@@ -9,6 +9,9 @@ extern String deviceMode;
 extern String loadState;
 extern String powerSource;
 
+extern String environmentalRisk;
+extern String systemRecommendation;
+
 extern bool greenLedState;
 
 extern bool fanRelayState;
