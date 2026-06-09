@@ -131,3 +131,20 @@ export type PushTokenResponse = {
   created_at: string | null;
   updated_at: string | null;
 };
+
+export type UserItem = {
+  id: number;
+  email: string;
+  role: "admin" | "operator" | "viewer";
+  active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type UserRoleUpdateRequest = {
+  role: "admin" | "operator" | "viewer";
+};
+
+export type UserStatusUpdateRequest = {
+  active: boolean;
+};

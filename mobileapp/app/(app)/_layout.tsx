@@ -75,6 +75,20 @@ function AppTabs() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

@@ -14,6 +14,9 @@ import type {
   RuntimeSettings,
   RuntimeSettingsUpdateRequest,
   TelemetryHistoryPoint,
+  UserItem,
+  UserRoleUpdateRequest,
+  UserStatusUpdateRequest
 } from "../types/api";
 
 export const apiClient = axios.create({
@@ -116,6 +119,35 @@ export async function registerPushToken(
 ): Promise<PushTokenResponse> {
   const response = await apiClient.post<PushTokenResponse>(
     "/push-tokens",
+    request
+  );
+
+  return response.data;
+}
+
+export async function getAdminUsers(): Promise<UserItem[]> {
+  const response = await apiClient.get<UserItem[]>("/admin/users");
+  return response.data;
+}
+
+export async function updateAdminUserRole(
+  userId: number,
+  request: UserRoleUpdateRequest
+): Promise<UserItem> {
+  const response = await apiClient.patch<UserItem>(
+    `/admin/users/${userId}/role`,
+    request
+  );
+
+  return response.data;
+}
+
+export async function updateAdminUserStatus(
+  userId: number,
+  request: UserStatusUpdateRequest
+): Promise<UserItem> {
+  const response = await apiClient.patch<UserItem>(
+    `/admin/users/${userId}/status`,
     request
   );
 
