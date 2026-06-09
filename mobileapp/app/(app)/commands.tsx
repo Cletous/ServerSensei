@@ -10,10 +10,12 @@ import {
 } from "react-native";
 
 import { createCommand } from "../../src/api/client";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
 export default function CommandsScreen() {
+  const insets = useSafeAreaInsets();
   const [sendingCommand, setSendingCommand] = useState(false);
 
   async function sendCommand(
@@ -58,7 +60,16 @@ export default function CommandsScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 90,
+        },
+      ]}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Remote Commands</Text>
         <Text style={styles.subtitle}>

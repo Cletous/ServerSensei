@@ -3,6 +3,7 @@ import axios from "axios";
 import { API_BASE_URL } from "../config/api";
 import { getToken } from "../storage/authStorage";
 import type {
+  AlertItem,
   CommandCreateRequest,
   CommandResponse,
   DecisionEvaluation,
@@ -78,6 +79,14 @@ export async function updateRuntimeSettings(
   const response = await apiClient.put<RuntimeSettings>(
     `/devices/${deviceId}/settings`,
     settings
+  );
+
+  return response.data;
+}
+
+export async function getDeviceAlerts(deviceId: string): Promise<AlertItem[]> {
+  const response = await apiClient.get<AlertItem[]>(
+    `/devices/${deviceId}/alerts`
   );
 
   return response.data;

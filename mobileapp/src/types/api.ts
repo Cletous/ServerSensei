@@ -91,3 +91,12 @@ export type RuntimeSettingsUpdateRequest = {
   demo_battery_recovery_percent_per_second?: number;
   demo_restart_battery_percent?: number;
 };
+
+export type AlertItem = {
+  id: number;
+  device_id: string;
+  alert_type: string;
+  severity: string;
+  message: string;
+  created_at: string;
+};

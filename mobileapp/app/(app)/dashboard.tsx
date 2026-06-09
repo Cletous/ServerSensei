@@ -18,6 +18,10 @@ import {
   getDevices,
 } from "../../src/api/client";
 import type { DecisionEvaluation, Device } from "../../src/types/api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatDateTime } from "../../src/utils/dateTime";
+
+const insets = useSafeAreaInsets();
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -125,7 +129,15 @@ export default function DashboardScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View
+        style={[
+          styles.center,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <ActivityIndicator size="large" />
         <Text style={styles.loadingText}>Loading dashboard...</Text>
       </View>
@@ -135,7 +147,13 @@ export default function DashboardScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 90,
+        },
+      ]}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
@@ -248,6 +266,9 @@ export default function DashboardScreen() {
                   <Text style={styles.alertType}>{alert.alert_type}</Text>
                   <Text style={styles.muted}>{alert.severity}</Text>
                   <Text>{alert.message}</Text>
+                  <Text style={styles.alertDate}>
+                    {formatDateTime(alert.created_at)}
+                  </Text>
                 </View>
               ))
             )}
@@ -502,6 +523,11 @@ const styles = StyleSheet.create({
   },
   settingsButtonText: {
     color: "#ffffff",
+    fontWeight: "700",
+  },
+  alertDate: {
+    marginTop: 6,
+    color: "#6b7280",
     fontWeight: "700",
   },
 });

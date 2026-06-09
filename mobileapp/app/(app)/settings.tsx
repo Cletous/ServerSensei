@@ -18,10 +18,13 @@ import {
   updateRuntimeSettings,
 } from "../../src/api/client";
 import type { RuntimeSettings } from "../../src/types/api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { formatDateTime } from "../../src/utils/dateTime";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState<RuntimeSettings | null>(null);
 
   const [fanOnTemperature, setFanOnTemperature] = useState("");
@@ -158,7 +161,15 @@ export default function SettingsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View
+        style={[
+          styles.center,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <ActivityIndicator size="large" />
         <Text style={styles.loadingText}>Loading runtime settings...</Text>
       </View>
@@ -170,7 +181,15 @@ export default function SettingsScreen() {
       style={styles.screen}
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + 16,
+            paddingBottom: insets.bottom + 90,
+          },
+        ]}
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Runtime Settings</Text>
@@ -249,7 +268,10 @@ export default function SettingsScreen() {
             label="Version"
             value={settings ? String(settings.settings_version) : "--"}
           />
-          <InfoRow label="Updated" value={settings?.updated_at || "--"} />
+          <InfoRow
+            label="Updated"
+            value={formatDateTime(settings?.updated_at)}
+          />
         </View>
 
         <Pressable
