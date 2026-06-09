@@ -14,6 +14,13 @@ from app.schemas.telemetry import (
     TelemetryResponse,
 )
 from app.services.alert_service import check_telemetry_alerts
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.dependencies.auth import get_current_user
+from app.models.power_status import PowerStatus
+from app.models.user import User
+from app.schemas.telemetry import TelemetryHistoryPoint
 
 router = APIRouter(
     tags=["Telemetry"]
@@ -186,3 +193,57 @@ def get_telemetry_history(
     ).limit(limit).all()
 
     return readings
+
+@router.get(
+    "/devices/{device_id}/telemetry/history",
+    response_model=list[TelemetryHistoryPoint]
+)
+def get_device_telemetry_history(
+    device_id: str,
+    limit: int = Query(default=30, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(Device).filter(
+        Device.device_id == device_id
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    readings = db.query(SensorReading).filter(
+        SensorReading.device_id == device.id
+    ).order_by(
+        SensorReading.created_at.desc()
+    ).limit(limit).all()
+
+    power_status = db.query(PowerStatus).filter(
+        PowerStatus.device_id == device.id
+    ).first()
+
+    history_points = []
+
+    for reading in reversed(readings):
+        history_points.append(
+            TelemetryHistoryPoint(
+                created_at=reading.created_at,
+
+                temperature=reading.temperature,
+                humidity=reading.humidity,
+
+                air_quality_raw=reading.air_quality_raw,
+                air_quality_status=reading.air_quality_status,
+
+                power_source=power_status.power_source if power_status else None,
+                battery_percent=power_status.battery_percent if power_status else None,
+                load_percent=power_status.load_percent if power_status else None,
+
+                environmental_risk=reading.environmental_risk,
+                system_recommendation=reading.system_recommendation,
+            )
+        )
+
+    return history_points

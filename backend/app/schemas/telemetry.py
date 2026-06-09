@@ -37,3 +37,19 @@ class TelemetryReadingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TelemetryHistoryPoint(BaseModel):
+    created_at: datetime
+
+    temperature: float | None = None
+    humidity: float | None = None
+
+    air_quality_raw: int | None = None
+    air_quality_status: str | None = None
+
+    power_source: str | None = None
+    battery_percent: float | None = None
+    load_percent: float | None = None
+
+    environmental_risk: str | None = None
+    system_recommendation: str | None = None
