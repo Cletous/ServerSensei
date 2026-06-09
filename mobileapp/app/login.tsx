@@ -14,7 +14,7 @@ import {
 import { router } from "expo-router";
 
 import { loginUser } from "../src/api/client";
-import { saveToken } from "../src/storage/authStorage";
+import { saveSession } from "../src/storage/authStorage";
 import { registerDeviceForRemotePush } from "../src/services/notificationService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../src/theme/colors";
@@ -43,8 +43,11 @@ export default function LoginScreen() {
       const response = await loginUser(email.trim(), password);
 
       console.log("Login successful");
-      await saveToken(response.access_token);
-
+      await saveSession(response.access_token, {
+        id: response.user_id,
+        email: response.email,
+        role: response.role,
+      });
       if (__DEV__) {
         console.log(
           "[Notifications] Skipping remote push registration in Expo Go/dev mode.",

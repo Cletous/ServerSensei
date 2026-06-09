@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -9,7 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
-
+import { getStoredUserRole } from "../../src/storage/authStorage";
 import {
   getAdminUsers,
   updateAdminUserRole,
@@ -21,6 +22,8 @@ import type { UserItem } from "../../src/types/api";
 export default function AdminScreen() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   async function loadUsers() {
     try {
@@ -37,7 +40,24 @@ export default function AdminScreen() {
   }
 
   useEffect(() => {
-    loadUsers();
+    async function checkAccessAndLoadUsers() {
+      const role = await getStoredUserRole();
+
+      if (role !== "admin") {
+        Alert.alert(
+          "Admin access required",
+          "Only administrators can manage users.",
+        );
+
+        router.replace("/dashboard");
+        return;
+      }
+
+      setCheckingAccess(false);
+      await loadUsers();
+    }
+
+    checkAccessAndLoadUsers();
   }, []);
 
   async function changeRole(user: UserItem, role: UserItem["role"]) {

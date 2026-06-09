@@ -1,10 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+
+import { getStoredUserRole } from "../../src/storage/authStorage";
 import { colors } from "../../src/theme/colors";
+import type { UserRole } from "../../src/types/api";
 
 export default function AppTabsLayout() {
   return (
@@ -16,6 +20,20 @@ export default function AppTabsLayout() {
 
 function AppTabs() {
   const insets = useSafeAreaInsets();
+  const [role, setRole] = useState<UserRole | null>(null);
+  const [roleLoaded, setRoleLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadRole() {
+      const storedRole = await getStoredUserRole();
+      setRole(storedRole);
+      setRoleLoaded(true);
+    }
+
+    loadRole();
+  }, []);
+
+  const isAdmin = roleLoaded && role === "admin";
 
   return (
     <Tabs
@@ -80,6 +98,7 @@ function AppTabs() {
         name="admin"
         options={{
           title: "Admin",
+          href: isAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons
               name="shield-checkmark-outline"
