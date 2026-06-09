@@ -11,13 +11,13 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 
-import { clearToken } from "../src/storage/authStorage";
+import { clearToken } from "../../src/storage/authStorage";
 import {
   createCommand,
   getDecisionEvaluation,
   getDevices,
-} from "../src/api/client";
-import type { DecisionEvaluation, Device } from "../src/types/api";
+} from "../../src/api/client";
+import type { DecisionEvaluation, Device } from "../../src/types/api";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -231,86 +231,6 @@ export default function DashboardScreen() {
                   : String(evaluation.air_quality_raw)
               }
             />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Remote Commands</Text>
-            <Text style={styles.muted}>
-              Commands are queued on the backend and executed when the ESP32
-              polls for pending commands.
-            </Text>
-
-            <Text style={styles.commandSectionTitle}>Device Mode</Text>
-            <View style={styles.commandGrid}>
-              <CommandButton
-                label="Monitor"
-                disabled={sendingCommand}
-                onPress={() => setDeviceMode("monitor")}
-              />
-              <CommandButton
-                label="Manual"
-                disabled={sendingCommand}
-                onPress={() => setDeviceMode("manual")}
-              />
-              <CommandButton
-                label="Automatic"
-                disabled={sendingCommand}
-                onPress={() => setDeviceMode("automatic")}
-              />
-              <CommandButton
-                label="Safe"
-                disabled={sendingCommand}
-                onPress={() => setDeviceMode("safe")}
-              />
-            </View>
-
-            <Text style={styles.commandSectionTitle}>Load State</Text>
-            <View style={styles.commandGrid}>
-              <CommandButton
-                label="Normal"
-                disabled={sendingCommand}
-                onPress={() => setLoadState("normal")}
-              />
-              <CommandButton
-                label="Low Runtime"
-                disabled={sendingCommand}
-                onPress={() => setLoadState("low_runtime")}
-              />
-              <CommandButton
-                label="Critical"
-                disabled={sendingCommand}
-                onPress={() => setLoadState("critical_runtime")}
-              />
-              <CommandButton
-                label="Safe Load"
-                disabled={sendingCommand}
-                onPress={() => setLoadState("safe")}
-              />
-              <CommandButton
-                label="All Off"
-                disabled={sendingCommand}
-                onPress={() => setLoadState("all_off")}
-              />
-            </View>
-
-            <Text style={styles.commandSectionTitle}>Battery Simulation</Text>
-            <View style={styles.commandGrid}>
-              <CommandButton
-                label="Battery 100%"
-                disabled={sendingCommand}
-                onPress={() => setBatteryPercent(100)}
-              />
-              <CommandButton
-                label="Battery 50%"
-                disabled={sendingCommand}
-                onPress={() => setBatteryPercent(50)}
-              />
-              <CommandButton
-                label="Battery 20%"
-                disabled={sendingCommand}
-                onPress={() => setBatteryPercent(20)}
-              />
-            </View>
           </View>
 
           <View style={styles.card}>
@@ -566,6 +486,21 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   commandButtonText: {
+    color: "#ffffff",
+    fontWeight: "700",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  settingsButton: {
+    backgroundColor: "#374151",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  settingsButtonText: {
     color: "#ffffff",
     fontWeight: "700",
   },

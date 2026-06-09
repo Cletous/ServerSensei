@@ -8,6 +8,8 @@ import type {
   DecisionEvaluation,
   Device,
   LoginResponse,
+  RuntimeSettings,
+  RuntimeSettingsUpdateRequest,
 } from "../types/api";
 
 export const apiClient = axios.create({
@@ -56,5 +58,27 @@ export async function createCommand(
   command: CommandCreateRequest
 ): Promise<CommandResponse> {
   const response = await apiClient.post<CommandResponse>("/commands", command);
+  return response.data;
+}
+
+export async function getRuntimeSettings(
+  deviceId: string
+): Promise<RuntimeSettings> {
+  const response = await apiClient.get<RuntimeSettings>(
+    `/devices/${deviceId}/settings/runtime`
+  );
+
+  return response.data;
+}
+
+export async function updateRuntimeSettings(
+  deviceId: string,
+  settings: RuntimeSettingsUpdateRequest
+): Promise<RuntimeSettings> {
+  const response = await apiClient.put<RuntimeSettings>(
+    `/devices/${deviceId}/settings`,
+    settings
+  );
+
   return response.data;
 }

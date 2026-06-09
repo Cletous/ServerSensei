@@ -62,3 +62,32 @@ export type CommandCreateRequest = {
   action: string;
   payload?: Record<string, unknown>;
 };
+
+export type RuntimeSettings = {
+  device_id: string;
+
+  fan_on_temperature: number;
+  fan_off_temperature: number;
+
+  low_runtime_threshold_minutes: number;
+  critical_runtime_threshold_minutes: number;
+
+  demo_ups_full_drain_seconds_at_100_load: number;
+  demo_battery_recovery_percent_per_second: number;
+  demo_restart_battery_percent: number;
+
+  settings_version: number;
+  updated_at: string;
+};
+
+export type RuntimeSettingsUpdateRequest = {
+  fan_on_temperature?: number;
+  fan_off_temperature?: number;
+
+  low_runtime_threshold_minutes?: number;
+  critical_runtime_threshold_minutes?: number;
+
+  demo_ups_full_drain_seconds_at_100_load?: number;
+  demo_battery_recovery_percent_per_second?: number;
+  demo_restart_battery_percent?: number;
+};
