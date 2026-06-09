@@ -209,6 +209,12 @@ void updateBatterySimulation()
     float elapsedSeconds = (now - lastBatteryUpdateTime) / 1000.0;
     lastBatteryUpdateTime = now;
 
+    // Prevent a long simulated shutdown period from being counted as one large charging interval when grid/generator power returns.
+    if (elapsedSeconds > 10.0)
+    {
+        elapsedSeconds = 0.0;
+    }
+
     updateLoadPercent();
 
     if (USE_SIMULATED_UPS_BATTERY)
@@ -244,7 +250,10 @@ void updateBatterySimulation()
                 }
                 else
                 {
-                    Serial.println("[Battery Demo] Power restored, but battery is still too low to restart simulated servers.");
+                    if (loadState != "all_off")
+                        setLoadState("all_off");
+
+                    Serial.println("[Battery Demo] Power restored, but battery is still charging before restart.");
                 }
             }
         }
