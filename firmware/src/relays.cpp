@@ -125,6 +125,22 @@ void controlFan(float temperature)
         return;
     }
 
+    bool environmentalRiskRequiresCooling =
+        environmentalRisk == "high" ||
+        environmentalRisk == "critical";
+
+    if (environmentalRiskRequiresCooling)
+    {
+        if (!fanRelayState)
+        {
+            fanRelayState = true;
+            Serial.println("[Fan] Environmental risk high/critical, fan ON");
+            applyRelayStates();
+        }
+
+        return;
+    }
+
     if (temperature >= fanOnTemperature)
     {
         if (!fanRelayState)
@@ -139,7 +155,7 @@ void controlFan(float temperature)
         if (fanRelayState)
         {
             fanRelayState = false;
-            Serial.println("[Fan] Temperature normal, fan OFF");
+            Serial.println("[Fan] Temperature normal and risk cleared, fan OFF");
             applyRelayStates();
         }
     }
