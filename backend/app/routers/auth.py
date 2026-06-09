@@ -26,10 +26,15 @@ def register_user(
             detail="Email already registered"
         )
 
+    existing_user_count = db.query(User).count()
+
+    # only assign the first user an admin role during registration
+    assigned_role = "admin" if existing_user_count == 0 else "viewer" 
+
     user = User(
         email=request.email,
         password_hash=hash_password(request.password),
-        role="admin"
+        role=assigned_role
     )
 
     db.add(user)
@@ -44,7 +49,12 @@ def register_user(
         }
     )
 
-    return AuthResponse(access_token=access_token)
+    return AuthResponse(
+        access_token=access_token,
+        user_id=user.id,
+        email=user.email,
+        role=user.role
+    )
 
 @router.post("/login", response_model=AuthResponse)
 def login_user(
@@ -75,4 +85,9 @@ def login_user(
         }
     )
 
-    return AuthResponse(access_token=access_token)
+    return AuthResponse(
+        access_token=access_token,
+        user_id=user.id,
+        email=user.email,
+        role=user.role
+    )
