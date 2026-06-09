@@ -21,11 +21,10 @@ import type { DecisionEvaluation, Device } from "../../src/types/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDateTime } from "../../src/utils/dateTime";
 
-const insets = useSafeAreaInsets();
-
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
 export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
   const [devices, setDevices] = useState<Device[]>([]);
   const [evaluation, setEvaluation] = useState<DecisionEvaluation | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState(DEFAULT_DEVICE_ID);
