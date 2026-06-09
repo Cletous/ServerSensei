@@ -15,7 +15,11 @@ import { router } from "expo-router";
 import { loginUser } from "../src/api/client";
 import { saveToken } from "../src/storage/authStorage";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors } from "../src/theme/colors";
+
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -59,7 +63,13 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top + 20,
+          paddingBottom: insets.bottom + 20,
+        },
+      ]}
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <View style={styles.card}>
@@ -109,56 +119,61 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 20,
+    backgroundColor: colors.background,
   },
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 20,
+    backgroundColor: colors.white,
+    borderRadius: 28,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   title: {
-    fontSize: 30,
-    fontWeight: "700",
+    fontSize: 34,
+    fontWeight: "900",
     textAlign: "center",
+    color: colors.primary,
   },
   subtitle: {
     fontSize: 15,
     textAlign: "center",
-    color: "#666",
-    marginBottom: 28,
+    color: colors.mutedText,
+    marginTop: 6,
+    marginBottom: 30,
   },
   label: {
-    fontWeight: "600",
+    fontWeight: "800",
     marginBottom: 6,
     marginTop: 12,
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    padding: 12,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 14,
     fontSize: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
   },
   button: {
-    backgroundColor: "#111827",
-    padding: 14,
-    borderRadius: 8,
-    marginTop: 22,
+    backgroundColor: colors.primary,
+    padding: 15,
+    borderRadius: 14,
+    marginTop: 24,
     alignItems: "center",
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: "#ffffff",
-    fontWeight: "700",
+    color: colors.white,
+    fontWeight: "900",
     fontSize: 16,
   },
   errorText: {
-    color: "#b91c1c",
+    color: colors.critical,
     marginTop: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

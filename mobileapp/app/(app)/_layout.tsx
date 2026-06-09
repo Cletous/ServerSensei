@@ -4,6 +4,7 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { colors } from "../../src/theme/colors";
 
 export default function AppTabsLayout() {
   return (
@@ -20,16 +21,18 @@ function AppTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#111827",
-        tabBarInactiveTintColor: "#6b7280",
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedText,
         tabBarStyle: {
-          height: 62 + insets.bottom,
+          height: 64 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 8,
+          backgroundColor: colors.white,
+          borderTopColor: colors.border,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: "700",
+          fontWeight: "800",
         },
       }}
     >

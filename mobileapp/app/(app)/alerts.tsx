@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getDeviceAlerts } from "../../src/api/client";
 import type { AlertItem } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -141,7 +142,7 @@ function SeverityPill({ severity }: { severity: string }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.background,
   },
   content: {
     paddingHorizontal: 16,
@@ -167,25 +168,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summaryCard: {
-    backgroundColor: "#111827",
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: colors.primary,
+    borderRadius: 22,
+    padding: 18,
     marginBottom: 14,
   },
   summaryNumber: {
-    color: "#ffffff",
-    fontSize: 34,
+    color: colors.white,
+    fontSize: 38,
     fontWeight: "900",
   },
   summaryLabel: {
-    color: "#d1d5db",
-    fontWeight: "700",
+    color: colors.primarySoft,
+    fontWeight: "800",
   },
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
+    backgroundColor: colors.white,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   alertHeader: {
     flexDirection: "row",
@@ -217,13 +220,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   pillCritical: {
-    backgroundColor: "#fee2e2",
+    backgroundColor: "#FEE2E2",
   },
   pillWarning: {
-    backgroundColor: "#fef3c7",
+    backgroundColor: "#FEF3C7",
   },
   pillInfo: {
-    backgroundColor: "#e5e7eb",
+    backgroundColor: colors.primarySoft,
   },
   pillText: {
     fontWeight: "800",
