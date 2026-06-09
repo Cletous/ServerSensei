@@ -77,6 +77,12 @@ def login_user(
             detail="Invalid email or password"
         )
 
+    if not user.active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled"
+        )
+
     access_token = create_access_token(
         data={
             "sub": user.email,
