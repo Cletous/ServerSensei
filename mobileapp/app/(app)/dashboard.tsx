@@ -10,14 +10,19 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
-
 import { clearToken } from "../../src/storage/authStorage";
 import {
   createCommand,
   getDecisionEvaluation,
   getDevices,
+  getTelemetryHistory,
 } from "../../src/api/client";
-import type { DecisionEvaluation, Device } from "../../src/types/api";
+import { LineChartCard } from "../../src/components/LineChartCard";
+import type {
+  DecisionEvaluation,
+  Device,
+  TelemetryHistoryPoint,
+} from "../../src/types/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDateTime } from "../../src/utils/dateTime";
 
@@ -29,6 +34,8 @@ export default function DashboardScreen() {
   const [evaluation, setEvaluation] = useState<DecisionEvaluation | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState(DEFAULT_DEVICE_ID);
   const [sendingCommand, setSendingCommand] = useState(false);
+
+  const [history, setHistory] = useState<TelemetryHistoryPoint[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,6 +59,9 @@ export default function DashboardScreen() {
 
       const decisionData = await getDecisionEvaluation(targetDevice.device_id);
       setEvaluation(decisionData);
+
+      const historyData = await getTelemetryHistory(targetDevice.device_id, 30);
+      setHistory(historyData);
     } catch (error) {
       Alert.alert(
         "Dashboard error",
@@ -141,6 +151,12 @@ export default function DashboardScreen() {
         <Text style={styles.loadingText}>Loading dashboard...</Text>
       </View>
     );
+  }
+
+  function getSeries(key: keyof TelemetryHistoryPoint): number[] {
+    return history
+      .map((point) => point[key])
+      .filter((value): value is number => typeof value === "number");
   }
 
   return (
@@ -249,6 +265,47 @@ export default function DashboardScreen() {
               }
             />
           </View>
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Trend Monitoring</Text>
+            <Text style={styles.sectionSubtitle}>
+              Recent readings from the latest telemetry history.
+            </Text>
+          </View>
+
+          <LineChartCard
+            title="Temperature"
+            valueLabel="Server room heat level"
+            unit="°C"
+            data={getSeries("temperature")}
+          />
+
+          <LineChartCard
+            title="Humidity"
+            valueLabel="Moisture level"
+            unit="%"
+            data={getSeries("humidity")}
+          />
+
+          <LineChartCard
+            title="Air Quality"
+            valueLabel="MQ135 raw reading"
+            data={getSeries("air_quality_raw")}
+          />
+
+          <LineChartCard
+            title="Battery Percentage"
+            valueLabel="UPS battery simulation"
+            unit="%"
+            data={getSeries("battery_percent")}
+          />
+
+          <LineChartCard
+            title="Load Percentage"
+            valueLabel="Active server/load level"
+            unit="%"
+            data={getSeries("load_percent")}
+          />
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Recent Alerts</Text>
@@ -528,5 +585,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: "#6b7280",
     fontWeight: "700",
+  },
+  sectionHeader: {
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#0F172A",
+  },
+  sectionSubtitle: {
+    color: "#64748B",
+    marginTop: 4,
   },
 });

@@ -100,3 +100,20 @@ export type AlertItem = {
   message: string;
   created_at: string;
 };
+
+export type TelemetryHistoryPoint = {
+  created_at: string;
+
+  temperature: number | null;
+  humidity: number | null;
+
+  air_quality_raw: number | null;
+  air_quality_status: string | null;
+
+  power_source: string | null;
+  battery_percent: number | null;
+  load_percent: number | null;
+
+  environmental_risk: string | null;
+  system_recommendation: string | null;
+};

@@ -11,6 +11,7 @@ import type {
   LoginResponse,
   RuntimeSettings,
   RuntimeSettingsUpdateRequest,
+  TelemetryHistoryPoint,
 } from "../types/api";
 
 export const apiClient = axios.create({
@@ -87,6 +88,22 @@ export async function updateRuntimeSettings(
 export async function getDeviceAlerts(deviceId: string): Promise<AlertItem[]> {
   const response = await apiClient.get<AlertItem[]>(
     `/devices/${deviceId}/alerts`
+  );
+
+  return response.data;
+}
+
+export async function getTelemetryHistory(
+  deviceId: string,
+  limit = 30
+): Promise<TelemetryHistoryPoint[]> {
+  const response = await apiClient.get<TelemetryHistoryPoint[]>(
+    `/devices/${deviceId}/telemetry/history`,
+    {
+      params: {
+        limit,
+      },
+    }
   );
 
   return response.data;
