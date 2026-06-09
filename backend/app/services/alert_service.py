@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.alert import Alert
 from app.models.device import Device
+from app.services.email_service import send_alert_email
 from app.services.power_prediction_service import estimate_ups_runtime_minutes
 
 HIGH_TEMPERATURE_THRESHOLD = 35.0
@@ -198,5 +199,10 @@ def check_telemetry_alerts(
 
         db.add(alert)
         new_alerts.append(alert)
+
+        try:
+            send_alert_email(alert=alert, device=device)
+        except Exception as error:
+            print(f"[Email Alerts] Failed to send alert email: {error}")
 
     return new_alerts
