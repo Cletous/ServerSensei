@@ -45,10 +45,16 @@ export default function LoginScreen() {
       console.log("Login successful");
       await saveToken(response.access_token);
 
-      try {
-        await registerDeviceForRemotePush();
-      } catch (error) {
-        console.log("[Notifications] Push registration failed:", error);
+      if (__DEV__) {
+        console.log(
+          "[Notifications] Skipping remote push registration in Expo Go/dev mode.",
+        );
+      } else {
+        try {
+          await registerDeviceForRemotePush();
+        } catch (error) {
+          console.log("[Notifications] Push registration failed:", error);
+        }
       }
 
       router.replace("/dashboard");
