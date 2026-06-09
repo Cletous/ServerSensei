@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -79,7 +80,11 @@ export default function LoginScreen() {
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>ServerSensei</Text>
+        <Image
+          source={require("../assets/brand/serversensei-rectangle-logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={styles.subtitle}>Mobile Monitoring App</Text>
 
         <Text style={styles.label}>Email</Text>
@@ -181,5 +186,10 @@ const styles = StyleSheet.create({
     color: colors.critical,
     marginTop: 12,
     fontWeight: "700",
+  },
+  logo: {
+    width: "100%",
+    height: 70,
+    marginBottom: 18,
   },
 });

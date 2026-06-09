@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.models.alert import Alert
@@ -16,7 +15,7 @@ CRITICAL_RUNTIME_THRESHOLD_MINUTES = 10.0
 POOR_AIR_QUALITY_THRESHOLD = 1000
 HAZARDOUS_AIR_QUALITY_THRESHOLD = 1500
 
-ALERT_DEDUP_MINUTES = 2
+ALERT_DEDUP_MINUTES = 30
 
 def alert_exists_recently(
     db: Session,
@@ -196,6 +195,9 @@ def check_telemetry_alerts(
             alert_type=alert.alert_type
         ):
             continue
+
+        if alert.created_at is None:
+            alert.created_at = datetime.now(timezone.utc)
 
         db.add(alert)
         new_alerts.append(alert)

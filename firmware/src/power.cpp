@@ -137,11 +137,11 @@ void readAirQuality()
     airQualityRaw = analogRead(MQ135_PIN);
     airQualityVoltage = (airQualityRaw / 4095.0) * 3.3;
 
-    if (airQualityRaw < 2400)
+    if (airQualityRaw < 500)
         airQualityStatus = "good";
-    else if (airQualityRaw < 2800)
+    else if (airQualityRaw < 1000)
         airQualityStatus = "moderate";
-    else if (airQualityRaw < 3300)
+    else if (airQualityRaw < 1500)
         airQualityStatus = "poor";
     else
         airQualityStatus = "hazardous";

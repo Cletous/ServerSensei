@@ -70,7 +70,7 @@ Alert Type: {alert.alert_type}
 Severity: {alert.severity.upper()}
 Message: {alert.message}
 
-Time: {format_alert_time(alert.created_at)}
+Time: {format_alert_time(alert.created_at)} UTC
 
 Recommended Action:
 Please check the ServerSensei mobile dashboard and inspect the server room conditions if necessary.
