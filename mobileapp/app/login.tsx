@@ -14,7 +14,7 @@ import { router } from "expo-router";
 
 import { loginUser } from "../src/api/client";
 import { saveToken } from "../src/storage/authStorage";
-
+import { registerDeviceForRemotePush } from "../src/services/notificationService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../src/theme/colors";
 
@@ -43,6 +43,12 @@ export default function LoginScreen() {
 
       console.log("Login successful");
       await saveToken(response.access_token);
+
+      try {
+        await registerDeviceForRemotePush();
+      } catch (error) {
+        console.log("[Notifications] Push registration failed:", error);
+      }
 
       router.replace("/dashboard");
     } catch (error) {

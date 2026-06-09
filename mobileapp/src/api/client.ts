@@ -9,6 +9,8 @@ import type {
   DecisionEvaluation,
   Device,
   LoginResponse,
+  PushTokenRegisterRequest,
+  PushTokenResponse,
   RuntimeSettings,
   RuntimeSettingsUpdateRequest,
   TelemetryHistoryPoint,
@@ -104,6 +106,17 @@ export async function getTelemetryHistory(
         limit,
       },
     }
+  );
+
+  return response.data;
+}
+
+export async function registerPushToken(
+  request: PushTokenRegisterRequest
+): Promise<PushTokenResponse> {
+  const response = await apiClient.post<PushTokenResponse>(
+    "/push-tokens",
+    request
   );
 
   return response.data;

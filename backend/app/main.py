@@ -12,8 +12,9 @@ from app.models import (
     alert,
     power_status,
     device_setting,
+    push_token,
 )
-from app.routers import alerts, auth, commands, devices, decision, power, telemetry
+from app.routers import alerts, auth, commands, devices, decision, power, push_tokens, telemetry
 from app.routers import settings as settings_router
 
 Base.metadata.create_all(bind=engine)
@@ -54,6 +55,7 @@ app.include_router(auth.router)
 app.include_router(alerts.router)
 app.include_router(devices.router)
 app.include_router(power.router)
+app.include_router(push_tokens.router)
 app.include_router(telemetry.router)
 app.include_router(commands.router)
 app.include_router(settings_router.router)

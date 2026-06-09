@@ -1,6 +1,8 @@
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 
+import { registerPushToken } from "../api/client";
 import type { AlertItem } from "../types/api";
 
 Notifications.setNotificationHandler({
@@ -17,16 +19,9 @@ export async function setupLocalNotifications(): Promise<void> {
     return;
   }
 
-  const existingPermissions = await Notifications.getPermissionsAsync();
+  const hasPermission = await requestNotificationPermission();
 
-  let finalStatus = existingPermissions.status;
-
-  if (existingPermissions.status !== "granted") {
-    const requestedPermissions = await Notifications.requestPermissionsAsync();
-    finalStatus = requestedPermissions.status;
-  }
-
-  if (finalStatus !== "granted") {
+  if (!hasPermission) {
     console.log("[Notifications] Permission not granted.");
     return;
   }
@@ -42,6 +37,52 @@ export async function setupLocalNotifications(): Promise<void> {
         Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
+}
+
+export async function registerDeviceForRemotePush(): Promise<void> {
+  if (Platform.OS === "web") {
+    return;
+  }
+
+  const hasPermission = await requestNotificationPermission();
+
+  if (!hasPermission) {
+    console.log("[Notifications] Permission not granted.");
+    return;
+  }
+
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId;
+
+  if (!projectId) {
+    console.log("[Notifications] Missing EAS projectId.");
+    return;
+  }
+
+  const tokenResponse = await Notifications.getExpoPushTokenAsync({
+    projectId,
+  });
+
+  await registerPushToken({
+    token: tokenResponse.data,
+    platform: Platform.OS,
+  });
+
+  console.log("[Notifications] Push token registered.");
+}
+
+async function requestNotificationPermission(): Promise<boolean> {
+  const existingPermissions = await Notifications.getPermissionsAsync();
+
+  let finalStatus = existingPermissions.status;
+
+  if (existingPermissions.status !== "granted") {
+    const requestedPermissions = await Notifications.requestPermissionsAsync();
+    finalStatus = requestedPermissions.status;
+  }
+
+  return finalStatus === "granted";
 }
 
 export function isNotifiableAlert(alert: AlertItem): boolean {

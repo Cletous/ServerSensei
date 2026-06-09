@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -130,18 +131,39 @@ export default function AlertsScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Alerts</Text>
-        <Text style={styles.subtitle}>
-          Latest environmental, power, runtime, and decision alerts.
-        </Text>
+        <View style={styles.headerIcon}>
+          <Ionicons
+            name="notifications-outline"
+            size={24}
+            color={colors.primary}
+          />
+        </View>
+
+        <View style={styles.headerText}>
+          <Text style={styles.title}>Alerts</Text>
+          <Text style={styles.subtitle}>
+            Latest environmental, power, runtime, and decision alerts.
+          </Text>
+        </View>
       </View>
 
       <View style={styles.summaryCard}>
-        <Text style={styles.summaryNumber}>{alerts.length}</Text>
-        <Text style={styles.summaryLabel}>recent alerts</Text>
+        <View>
+          <Text style={styles.summaryNumber}>{alerts.length}</Text>
+          <Text style={styles.summaryLabel}>recent alerts</Text>
+        </View>
+
+        <View style={styles.summaryIcon}>
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={30}
+            color={colors.white}
+          />
+        </View>
       </View>
 
       <Pressable style={styles.testButton} onPress={sendTestNotification}>
+        <Ionicons name="paper-plane-outline" size={18} color={colors.white} />
         <Text style={styles.testButtonText}>Send Test Notification</Text>
       </Pressable>
 
@@ -156,15 +178,27 @@ export default function AlertsScreen() {
         alerts.map((item) => (
           <View key={item.id} style={styles.card}>
             <View style={styles.alertHeader}>
-              <Text style={styles.cardTitle}>{item.alert_type}</Text>
+              <View style={styles.alertTitleWrap}>
+                <SeverityIcon severity={item.severity} />
+
+                <Text style={styles.cardTitle}>{item.alert_type}</Text>
+              </View>
+
               <SeverityPill severity={item.severity} />
             </View>
 
             <Text style={styles.message}>{item.message}</Text>
 
-            <Text style={styles.dateText}>
-              {formatDateTime(item.created_at)}
-            </Text>
+            <View style={styles.dateRow}>
+              <Ionicons
+                name="time-outline"
+                size={15}
+                color={colors.mutedText}
+              />
+              <Text style={styles.dateText}>
+                {formatDateTime(item.created_at)}
+              </Text>
+            </View>
           </View>
         ))
       )}
@@ -172,17 +206,60 @@ export default function AlertsScreen() {
   );
 }
 
+function SeverityIcon({ severity }: { severity: string }) {
+  const normalizedSeverity = severity.toLowerCase();
+
+  if (normalizedSeverity === "critical") {
+    return (
+      <View style={[styles.severityIcon, styles.severityIconCritical]}>
+        <Ionicons
+          name="alert-circle-outline"
+          size={18}
+          color={colors.critical}
+        />
+      </View>
+    );
+  }
+
+  if (normalizedSeverity === "warning") {
+    return (
+      <View style={[styles.severityIcon, styles.severityIconWarning]}>
+        <Ionicons name="warning-outline" size={18} color={colors.warning} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.severityIcon, styles.severityIconInfo]}>
+      <Ionicons
+        name="information-circle-outline"
+        size={18}
+        color={colors.info}
+      />
+    </View>
+  );
+}
+
 function SeverityPill({ severity }: { severity: string }) {
+  const normalizedSeverity = severity.toLowerCase();
+
   const tone =
-    severity === "critical"
+    normalizedSeverity === "critical"
       ? styles.pillCritical
-      : severity === "warning"
+      : normalizedSeverity === "warning"
         ? styles.pillWarning
         : styles.pillInfo;
 
+  const textTone =
+    normalizedSeverity === "critical"
+      ? styles.pillTextCritical
+      : normalizedSeverity === "warning"
+        ? styles.pillTextWarning
+        : styles.pillTextInfo;
+
   return (
     <View style={[styles.pill, tone]}>
-      <Text style={styles.pillText}>{severity}</Text>
+      <Text style={[styles.pillText, textTone]}>{severity}</Text>
     </View>
   );
 }
@@ -204,23 +281,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
   },
-  header: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  subtitle: {
-    color: "#6b7280",
-    marginTop: 4,
-  },
-  summaryCard: {
-    backgroundColor: colors.primary,
-    borderRadius: 22,
-    padding: 18,
-    marginBottom: 14,
-  },
   summaryNumber: {
     color: colors.white,
     fontSize: 38,
@@ -238,29 +298,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  alertHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    flex: 1,
-  },
   muted: {
     color: "#6b7280",
   },
   message: {
     lineHeight: 22,
     color: "#374151",
-  },
-  dateText: {
-    marginTop: 10,
-    color: "#6b7280",
-    fontWeight: "700",
   },
   pill: {
     paddingHorizontal: 10,
@@ -276,19 +319,120 @@ const styles = StyleSheet.create({
   pillInfo: {
     backgroundColor: colors.primarySoft,
   },
-  pillText: {
-    fontWeight: "800",
-    textTransform: "capitalize",
-  },
-  testButton: {
-    backgroundColor: "#16A34A",
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: "center",
-    marginBottom: 14,
-  },
   testButtonText: {
     color: "#ffffff",
     fontWeight: "900",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  subtitle: {
+    color: colors.mutedText,
+    marginTop: 4,
+    lineHeight: 20,
+  },
+  summaryCard: {
+    backgroundColor: colors.primary,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  summaryIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  testButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+    flexDirection: "row",
+    gap: 8,
+  },
+  alertHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  alertTitleWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: colors.text,
+    flex: 1,
+  },
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
+  dateText: {
+    color: colors.mutedText,
+    fontWeight: "700",
+  },
+  pillText: {
+    fontWeight: "900",
+    textTransform: "capitalize",
+  },
+  pillTextCritical: {
+    color: colors.critical,
+  },
+  pillTextWarning: {
+    color: "#92400E",
+  },
+  pillTextInfo: {
+    color: colors.primaryDark,
+  },
+  severityIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  severityIconCritical: {
+    backgroundColor: "#FEE2E2",
+  },
+  severityIconWarning: {
+    backgroundColor: "#FEF3C7",
+  },
+  severityIconInfo: {
+    backgroundColor: colors.primarySoft,
   },
 });

@@ -117,3 +117,17 @@ export type TelemetryHistoryPoint = {
   environmental_risk: string | null;
   system_recommendation: string | null;
 };
+
+export type PushTokenRegisterRequest = {
+  token: string;
+  platform?: string | null;
+};
+
+export type PushTokenResponse = {
+  id: number;
+  token: string;
+  platform: string | null;
+  active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+};
