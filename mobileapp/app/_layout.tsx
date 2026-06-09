@@ -1,8 +1,15 @@
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { setupLocalNotifications } from "../src/services/notificationService";
+
 export default function RootLayout() {
+  useEffect(() => {
+    setupLocalNotifications();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <Stack initialRouteName="login">

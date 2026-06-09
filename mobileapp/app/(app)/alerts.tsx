@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,7 +10,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
+import {
+  isNotifiableAlert,
+  showAlertNotification,
+} from "../../src/services/notificationService";
 import { getDeviceAlerts } from "../../src/api/client";
 import type { AlertItem } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
@@ -24,10 +28,38 @@ export default function AlertsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const firstLoadRef = useRef(true);
+  const notifiedAlertIdsRef = useRef<Set<number>>(new Set());
+
   async function loadAlerts() {
     try {
       const data = await getDeviceAlerts(DEFAULT_DEVICE_ID);
       setAlerts(data);
+
+      if (firstLoadRef.current) {
+        data.forEach((item) => {
+          notifiedAlertIdsRef.current.add(item.id);
+        });
+
+        firstLoadRef.current = false;
+        return;
+      }
+
+      const newNotifiableAlerts = data.filter((item) => {
+        return (
+          isNotifiableAlert(item) && !notifiedAlertIdsRef.current.has(item.id)
+        );
+      });
+
+      for (const item of newNotifiableAlerts) {
+        await showAlertNotification(item);
+        notifiedAlertIdsRef.current.add(item.id);
+      }
+
+      if (notifiedAlertIdsRef.current.size > 100) {
+        const trimmedIds = Array.from(notifiedAlertIdsRef.current).slice(-100);
+        notifiedAlertIdsRef.current = new Set(trimmedIds);
+      }
     } catch (error) {
       Alert.alert(
         "Alerts error",
@@ -71,6 +103,18 @@ export default function AlertsScreen() {
     );
   }
 
+  async function sendTestNotification() {
+    await showAlertNotification({
+      id: Date.now(),
+      device_id: DEFAULT_DEVICE_ID,
+      alert_type: "TEST_NOTIFICATION",
+      severity: "critical",
+      message:
+        "This is a ServerSensei test notification. Local alerts are working.",
+      created_at: new Date().toISOString(),
+    });
+  }
+
   return (
     <ScrollView
       style={styles.screen}
@@ -96,6 +140,10 @@ export default function AlertsScreen() {
         <Text style={styles.summaryNumber}>{alerts.length}</Text>
         <Text style={styles.summaryLabel}>recent alerts</Text>
       </View>
+
+      <Pressable style={styles.testButton} onPress={sendTestNotification}>
+        <Text style={styles.testButtonText}>Send Test Notification</Text>
+      </Pressable>
 
       {alerts.length === 0 ? (
         <View style={styles.card}>
@@ -231,5 +279,16 @@ const styles = StyleSheet.create({
   pillText: {
     fontWeight: "800",
     textTransform: "capitalize",
+  },
+  testButton: {
+    backgroundColor: "#16A34A",
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  testButtonText: {
+    color: "#ffffff",
+    fontWeight: "900",
   },
 });
