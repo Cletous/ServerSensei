@@ -45,8 +45,14 @@ def receive_telemetry(
         device_id=device.id,
         temperature=request.temperature,
         humidity=request.humidity,
+
         air_quality_raw=request.air_quality_raw,
         air_quality_status=request.air_quality_status,
+
+        power_source=request.power_source,
+        battery_percent=request.battery_percent,
+        load_percent=request.load_percent,
+
         environmental_risk=request.environmental_risk,
         system_recommendation=request.system_recommendation
     )
@@ -168,34 +174,6 @@ def get_latest_telemetry(
 
 @router.get(
     "/devices/{device_id}/telemetry/history",
-    response_model=list[TelemetryReadingResponse]
-)
-def get_telemetry_history(
-    device_id: str,
-    limit: int = Query(default=50, ge=1, le=500),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    device = db.query(Device).filter(
-        Device.device_id == device_id
-    ).first()
-
-    if not device:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Device not found"
-        )
-
-    readings = db.query(SensorReading).filter(
-        SensorReading.device_id == device.id
-    ).order_by(
-        SensorReading.created_at.desc()
-    ).limit(limit).all()
-
-    return readings
-
-@router.get(
-    "/devices/{device_id}/telemetry/history",
     response_model=list[TelemetryHistoryPoint]
 )
 def get_device_telemetry_history(
@@ -220,10 +198,6 @@ def get_device_telemetry_history(
         SensorReading.created_at.desc()
     ).limit(limit).all()
 
-    power_status = db.query(PowerStatus).filter(
-        PowerStatus.device_id == device.id
-    ).first()
-
     history_points = []
 
     for reading in reversed(readings):
@@ -237,9 +211,9 @@ def get_device_telemetry_history(
                 air_quality_raw=reading.air_quality_raw,
                 air_quality_status=reading.air_quality_status,
 
-                power_source=power_status.power_source if power_status else None,
-                battery_percent=power_status.battery_percent if power_status else None,
-                load_percent=power_status.load_percent if power_status else None,
+                power_source=reading.power_source,
+                battery_percent=reading.battery_percent,
+                load_percent=reading.load_percent,
 
                 environmental_risk=reading.environmental_risk,
                 system_recommendation=reading.system_recommendation,
