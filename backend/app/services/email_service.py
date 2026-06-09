@@ -1,5 +1,6 @@
 from datetime import datetime
 from email.message import EmailMessage
+from email.utils import formataddr
 import smtplib
 import ssl
 
@@ -14,6 +15,7 @@ SEVERITY_RANK = {
     "critical": 3,
 }
 
+
 def get_alert_recipients() -> list[str]:
     if not settings.ALERT_RECIPIENT_EMAILS:
         return []
@@ -23,6 +25,7 @@ def get_alert_recipients() -> list[str]:
         for email in settings.ALERT_RECIPIENT_EMAILS.split(",")
         if email.strip()
     ]
+
 
 def should_send_email_for_alert(alert: Alert) -> bool:
     if not settings.EMAIL_ALERTS_ENABLED:
@@ -42,6 +45,7 @@ def should_send_email_for_alert(alert: Alert) -> bool:
 
     return alert_rank >= minimum_rank
 
+
 def format_alert_time(value: datetime | None) -> str:
     if value is None:
         return "Unknown time"
@@ -53,6 +57,7 @@ def format_alert_time(value: datetime | None) -> str:
     time = value.strftime("%H:%M")
 
     return f"{weekday}, {day} {month} {year} @ {time}"
+
 
 def build_alert_email_body(alert: Alert, device: Device) -> str:
     return f"""ServerSensei Alert Notification
@@ -73,6 +78,14 @@ Please check the ServerSensei mobile dashboard and inspect the server room condi
 This is an automated alert from ServerSensei.
 """
 
+
+def get_from_address() -> str:
+    from_email = settings.MAIL_FROM_ADDRESS or settings.MAIL_USERNAME
+    from_name = settings.MAIL_FROM_NAME or "ServerSensei"
+
+    return formataddr((from_name, from_email))
+
+
 def send_alert_email(alert: Alert, device: Device) -> None:
     if not should_send_email_for_alert(alert):
         return
@@ -83,14 +96,28 @@ def send_alert_email(alert: Alert, device: Device) -> None:
     message["Subject"] = (
         f"ServerSensei {alert.severity.upper()} Alert - {alert.alert_type}"
     )
-    message["From"] = settings.SMTP_FROM_EMAIL or settings.SMTP_USERNAME
+    message["From"] = get_from_address()
     message["To"] = ", ".join(recipients)
 
     message.set_content(build_alert_email_body(alert, device))
 
     context = ssl.create_default_context()
+    encryption = settings.MAIL_ENCRYPTION.lower().strip()
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-        server.starttls(context=context)
-        server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+    if encryption == "ssl":
+        with smtplib.SMTP_SSL(
+            settings.MAIL_HOST,
+            settings.MAIL_PORT,
+            context=context
+        ) as server:
+            server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
+            server.send_message(message)
+
+        return
+
+    with smtplib.SMTP(settings.MAIL_HOST, settings.MAIL_PORT) as server:
+        if encryption in ["tls", "starttls"]:
+            server.starttls(context=context)
+
+        server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
         server.send_message(message)

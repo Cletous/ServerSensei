@@ -15,15 +15,19 @@ class Settings(BaseSettings):
     EMAIL_ALERTS_ENABLED: bool = False
     EMAIL_ALERT_MIN_SEVERITY: str = "warning"
 
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USERNAME: str = ""
-    SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = ""
+    MAIL_MAILER: str = "smtp"
+    MAIL_HOST: str = ""
+    MAIL_PORT: int = 465
+    MAIL_USERNAME: str = ""
+    MAIL_PASSWORD: str = ""
+    MAIL_ENCRYPTION: str = "ssl"
+    MAIL_FROM_ADDRESS: str = ""
+    MAIL_FROM_NAME: str = "ServerSensei"
 
     ALERT_RECIPIENT_EMAILS: str = ""
 
     class Config:
         env_file = ".env"
+
 
 settings = Settings()
