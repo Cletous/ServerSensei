@@ -404,10 +404,20 @@ export default function CommandsScreen() {
       ]}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Remote Commands</Text>
+        <Text style={styles.eyebrow}>Operations Center</Text>
+        <Text style={styles.title}>Control Console</Text>
         <Text style={styles.subtitle}>
-          Queue commands for the ESP32 through the backend.
+          Direct hardware controls are grouped by operational area. Manual Mode
+          is required for fan, relay, server, and load commands.
         </Text>
+      </View>
+
+      <View style={styles.operationMap}>
+        <OperationMapItem icon="options-outline" label="Mode" />
+        <OperationMapItem icon="snow-outline" label="Cooling" />
+        <OperationMapItem icon="server-outline" label="Servers" />
+        <OperationMapItem icon="battery-half-outline" label="Battery" />
+        <OperationMapItem icon="speedometer-outline" label="Load" />
       </View>
 
       <View style={styles.card}>
@@ -429,7 +439,19 @@ export default function CommandsScreen() {
           </View>
         </View>
 
-        <View style={styles.toggleRow}>
+        <View
+          style={[
+            styles.toggleRow,
+            {
+              borderColor:
+                currentMode === "manual" ? colors.primary : colors.border,
+              backgroundColor:
+                currentMode === "manual"
+                  ? colors.primarySoft
+                  : colors.background,
+            },
+          ]}
+        >
           <View>
             <Text style={styles.toggleTitle}>
               {currentMode === "manual" ? "Manual Mode" : "Automatic Mode"}
@@ -629,11 +651,23 @@ export default function CommandsScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Load State</Text>
-        <Text style={styles.muted}>
-          Load commands require Manual Mode and are rejected when the ESP32 is
-          not in manual control.
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.cardTitle}>Load Management</Text>
+            <Text style={styles.muted}>
+              Choose the simulated load-shedding state for the server room.
+              These commands require Manual Mode.
+            </Text>
+          </View>
+
+          <View style={styles.iconBadge}>
+            <Ionicons
+              name="speedometer-outline"
+              size={22}
+              color={colors.primaryDark}
+            />
+          </View>
+        </View>
 
         <View style={styles.commandGrid}>
           <CommandButton
@@ -665,10 +699,20 @@ export default function CommandsScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Battery Simulation</Text>
-        <Text style={styles.muted}>
-          These are useful during demonstrations and runtime-drain testing.
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.cardTitle}>Power Simulation</Text>
+            <Text style={styles.muted}>Power-aware load view.</Text>
+          </View>
+
+          <View style={styles.iconBadge}>
+            <Ionicons
+              name="battery-half-outline"
+              size={22}
+              color={colors.primaryDark}
+            />
+          </View>
+        </View>
 
         <View style={styles.commandGrid}>
           <CommandButton
@@ -696,6 +740,23 @@ export default function CommandsScreen() {
         </View>
       ) : null}
     </ScrollView>
+  );
+}
+
+function OperationMapItem({
+  icon,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}) {
+  return (
+    <View style={styles.operationMapItem}>
+      <View style={styles.operationMapIcon}>
+        <Ionicons name={icon} size={18} color={colors.primaryDark} />
+      </View>
+      <Text style={styles.operationMapLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -828,7 +889,7 @@ function CommandButton({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.background,
   },
   sectionHeaderText: {
     flex: 1,
@@ -849,33 +910,59 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingHorizontal: 18,
   },
   header: {
     marginBottom: 16,
   },
+  eyebrow: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+
   title: {
-    fontSize: 28,
-    fontWeight: "800",
+    color: colors.text,
+    fontSize: 30,
+    fontWeight: "900",
+    marginTop: 6,
   },
+
   subtitle: {
-    color: "#6b7280",
-    marginTop: 4,
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 8,
   },
+
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
     padding: 16,
     marginBottom: 14,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   cardTitle: {
+    color: colors.text,
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "900",
     marginBottom: 6,
   },
+
   muted: {
-    color: "#6b7280",
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 19,
     marginBottom: 12,
   },
   commandGrid: {
@@ -884,10 +971,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   commandButton: {
-    backgroundColor: "#111827",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: colors.secondary,
+    borderColor: colors.secondary,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 14,
     marginBottom: 6,
   },
   commandButtonDisabled: {
@@ -951,16 +1040,14 @@ const styles = StyleSheet.create({
     opacity: 0.82,
     transform: [{ scale: 0.98 }],
   },
-
   serverControlRow: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: 20,
+    padding: 14,
     marginBottom: 12,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: colors.background,
   },
-
   serverControlHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -980,12 +1067,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
     padding: 14,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#F9FAFB",
   },
-
   toggleTitle: {
     color: colors.text,
     fontSize: 16,
@@ -1062,5 +1146,45 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 10,
     fontWeight: "900",
+  },
+  operationMap: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+
+  operationMapItem: {
+    flexGrow: 1,
+    minWidth: "30%",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    gap: 7,
+  },
+
+  operationMapIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 13,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  operationMapLabel: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: "900",
+    textAlign: "center",
   },
 });
