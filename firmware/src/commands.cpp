@@ -73,6 +73,48 @@ bool isValidLoadState(String stateValue)
         stateValue == "all_off");
 }
 
+String serverIdFromAction(String action)
+{
+    if (
+        action == "power_on_critical_a" ||
+        action == "power_off_critical_a" ||
+        action == "restart_critical_a")
+    {
+        return "critical_a";
+    }
+
+    if (
+        action == "power_on_critical_b" ||
+        action == "power_off_critical_b" ||
+        action == "restart_critical_b")
+    {
+        return "critical_b";
+    }
+
+    if (
+        action == "power_on_non_critical_a" ||
+        action == "power_off_non_critical_a" ||
+        action == "restart_non_critical_a")
+    {
+        return "non_critical_a";
+    }
+
+    if (
+        action == "power_on_non_critical_b" ||
+        action == "power_off_non_critical_b" ||
+        action == "restart_non_critical_b")
+    {
+        return "non_critical_b";
+    }
+
+    return "";
+}
+
+bool isNewServerControlAction(String action)
+{
+    return serverIdFromAction(action) != "";
+}
+
 bool commandRequiresManualMode(String action)
 {
     return action == "fan_on" ||
@@ -80,10 +122,14 @@ bool commandRequiresManualMode(String action)
            action == "set_fan" ||
            action == "turn_fan_on" ||
            action == "turn_fan_off" ||
+
            action == "server_on" ||
            action == "server_off" ||
            action == "set_relay" ||
            action == "restart_server" ||
+
+           isNewServerControlAction(action) ||
+
            action == "restart_all_servers" ||
            action == "power_all_servers" ||
            action == "shutdown_all_servers" ||
@@ -219,6 +265,37 @@ bool executeCommand(JsonObject command)
         bool fanOn = payload["on"];
 
         return setFanRelayState(fanOn);
+    }
+
+    if (isNewServerControlAction(actionValue))
+    {
+        String serverId = serverIdFromAction(actionValue);
+
+        if (serverId == "")
+        {
+            Serial.print("[Commands] Could not map server action: ");
+            Serial.println(actionValue);
+            return false;
+        }
+
+        if (actionValue.startsWith("power_on_"))
+        {
+            return setServerPowerState(serverId, true);
+        }
+
+        if (actionValue.startsWith("power_off_"))
+        {
+            return setServerPowerState(serverId, false);
+        }
+
+        if (actionValue.startsWith("restart_"))
+        {
+            return restartServer(serverId);
+        }
+
+        Serial.print("[Commands] Unsupported server control action: ");
+        Serial.println(actionValue);
+        return false;
     }
 
     if (actionValue == "server_on" || actionValue == "server_off")

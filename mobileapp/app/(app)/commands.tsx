@@ -22,13 +22,29 @@ const MANUAL_ONLY_ACTIONS = new Set([
   "set_fan",
   "turn_fan_on",
   "turn_fan_off",
+
   "server_on",
   "server_off",
   "set_relay",
   "restart_server",
+
+  "power_on_critical_a",
+  "power_off_critical_a",
+  "restart_critical_a",
+  "power_on_critical_b",
+  "power_off_critical_b",
+  "restart_critical_b",
+  "power_on_non_critical_a",
+  "power_off_non_critical_a",
+  "restart_non_critical_a",
+  "power_on_non_critical_b",
+  "power_off_non_critical_b",
+  "restart_non_critical_b",
+
   "restart_all_servers",
   "power_all_servers",
   "shutdown_all_servers",
+
   "set_load_state",
   "normal",
   "low_runtime",
@@ -46,6 +62,43 @@ type ServerId =
   | "non_critical_b"
   | "critical_a"
   | "critical_b";
+
+type ServerActionType = "power_on" | "power_off" | "restart";
+
+const SERVER_LABELS: Record<ServerId, string> = {
+  non_critical_a: "Non-Critical Server A",
+  non_critical_b: "Non-Critical Server B",
+  critical_a: "Critical Server A",
+  critical_b: "Critical Server B",
+};
+
+function isCriticalServer(server: ServerId) {
+  return server === "critical_a" || server === "critical_b";
+}
+
+function buildServerAction(actionType: ServerActionType, server: ServerId) {
+  if (server === "critical_a") {
+    if (actionType === "power_on") return "power_on_critical_a";
+    if (actionType === "power_off") return "power_off_critical_a";
+    return "restart_critical_a";
+  }
+
+  if (server === "critical_b") {
+    if (actionType === "power_on") return "power_on_critical_b";
+    if (actionType === "power_off") return "power_off_critical_b";
+    return "restart_critical_b";
+  }
+
+  if (server === "non_critical_a") {
+    if (actionType === "power_on") return "power_on_non_critical_a";
+    if (actionType === "power_off") return "power_off_non_critical_a";
+    return "restart_non_critical_a";
+  }
+
+  if (actionType === "power_on") return "power_on_non_critical_b";
+  if (actionType === "power_off") return "power_off_non_critical_b";
+  return "restart_non_critical_b";
+}
 
 export default function CommandsScreen() {
   const insets = useSafeAreaInsets();
@@ -139,26 +192,100 @@ export default function CommandsScreen() {
     await sendCommand("set_load_state", { state });
   }
 
-  function serverOn(server: ServerId) {
-    setServerStates((current) => ({
-      ...current,
-      [server]: true,
-    }));
+  async function runServerAction(
+    server: ServerId,
+    actionType: ServerActionType,
+  ) {
+    const action = buildServerAction(actionType, server);
+    const label = SERVER_LABELS[server];
 
-    return sendCommand("server_on", { server });
+    if (actionType === "power_on") {
+      setServerStates((current) => ({
+        ...current,
+        [server]: true,
+      }));
+    }
+
+    if (actionType === "power_off") {
+      setServerStates((current) => ({
+        ...current,
+        [server]: false,
+      }));
+    }
+
+    return sendCommand(action, {
+      server,
+      server_label: label,
+      source: "server_control_center",
+    });
+  }
+
+  function serverOn(server: ServerId) {
+    const label = SERVER_LABELS[server];
+
+    if (isCriticalServer(server)) {
+      Alert.alert(
+        `Power ON ${label}?`,
+        "This is a critical simulated server. Confirm that Manual Mode is active and that powering it ON is intentional.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Power ON",
+            onPress: () => runServerAction(server, "power_on"),
+          },
+        ],
+      );
+
+      return;
+    }
+
+    return runServerAction(server, "power_on");
   }
 
   function serverOff(server: ServerId) {
-    setServerStates((current) => ({
-      ...current,
-      [server]: false,
-    }));
+    const label = SERVER_LABELS[server];
 
-    return sendCommand("server_off", { server });
+    if (isCriticalServer(server)) {
+      Alert.alert(
+        `Power OFF ${label}?`,
+        "This is a critical simulated server. Turning it OFF may represent downtime for an important service. Continue only if this is intentional.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Power OFF",
+            style: "destructive",
+            onPress: () => runServerAction(server, "power_off"),
+          },
+        ],
+      );
+
+      return;
+    }
+
+    return runServerAction(server, "power_off");
   }
 
   function restartServer(server: ServerId) {
-    return sendCommand("restart_server", { server });
+    const label = SERVER_LABELS[server];
+
+    if (isCriticalServer(server)) {
+      Alert.alert(
+        `Restart ${label}?`,
+        "This is a critical simulated server. Restarting it will briefly turn the relay OFF, then back ON. Continue only if this is intentional.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Restart",
+            style: "destructive",
+            onPress: () => runServerAction(server, "restart"),
+          },
+        ],
+      );
+
+      return;
+    }
+
+    return runServerAction(server, "restart");
   }
 
   function restartAllServers() {
@@ -391,10 +518,11 @@ export default function CommandsScreen() {
       <View style={styles.card}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionHeaderText}>
-            <Text style={styles.cardTitle}>Server Control Center</Text>
+            <Text style={styles.cardTitle}>Infrastructure Control Center</Text>
             <Text style={styles.muted}>
-              Toggle individual simulated server relays. Load percentage is
-              recalculated from servers currently powered ON.
+              Control simulated server relays individually. Critical server
+              actions require stronger confirmation. Non-admin users create
+              approval requests before commands can reach the controller.
             </Text>
           </View>
 
@@ -460,6 +588,7 @@ export default function CommandsScreen() {
           serverId="non_critical_a"
           isOn={serverStates.non_critical_a}
           disabled={sendingCommand || loadingState}
+          critical={false}
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -470,6 +599,7 @@ export default function CommandsScreen() {
           serverId="non_critical_b"
           isOn={serverStates.non_critical_b}
           disabled={sendingCommand || loadingState}
+          critical={false}
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -480,6 +610,7 @@ export default function CommandsScreen() {
           serverId="critical_a"
           isOn={serverStates.critical_a}
           disabled={sendingCommand || loadingState}
+          critical
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -490,6 +621,7 @@ export default function CommandsScreen() {
           serverId="critical_b"
           isOn={serverStates.critical_b}
           disabled={sendingCommand || loadingState}
+          critical
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -572,6 +704,7 @@ function ServerControlRow({
   serverId,
   isOn,
   disabled,
+  critical = false,
   onServerOn,
   onServerOff,
   onRestartServer,
@@ -580,6 +713,7 @@ function ServerControlRow({
   serverId: ServerId;
   isOn: boolean;
   disabled?: boolean;
+  critical?: boolean;
   onServerOn: (server: ServerId) => void;
   onServerOff: (server: ServerId) => void;
   onRestartServer: (server: ServerId) => void;
@@ -594,7 +728,19 @@ function ServerControlRow({
             color={isOn ? colors.success : colors.mutedText}
           />
           <View>
-            <Text style={styles.serverControlTitle}>{title}</Text>
+            <View style={styles.serverTitleMetaRow}>
+              <Text style={styles.serverControlTitle}>{title}</Text>
+
+              {critical ? (
+                <View style={styles.criticalBadge}>
+                  <Text style={styles.criticalBadgeText}>CRITICAL</Text>
+                </View>
+              ) : (
+                <View style={styles.nonCriticalBadge}>
+                  <Text style={styles.nonCriticalBadgeText}>NON-CRITICAL</Text>
+                </View>
+              )}
+            </View>
             <Text
               style={[
                 styles.serverStatusText,
@@ -880,5 +1026,41 @@ const styles = StyleSheet.create({
 
   serverStatusOff: {
     color: colors.mutedText,
+  },
+  serverTitleMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  criticalBadge: {
+    backgroundColor: "#FEF2F2",
+    borderColor: colors.critical,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+
+  criticalBadgeText: {
+    color: colors.critical,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+
+  nonCriticalBadge: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+
+  nonCriticalBadgeText: {
+    color: colors.primaryDark,
+    fontSize: 10,
+    fontWeight: "900",
   },
 });
