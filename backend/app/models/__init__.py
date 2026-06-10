@@ -7,5 +7,6 @@ from app.models.command import Command
 from app.models.alert import Alert
 from app.models.device_setting import DeviceSetting
 from app.models.push_token import PushToken
+from app.models.audit_log import AuditLog
 
 # This makes sure SQLAlchemy can discover the models when creating tables.

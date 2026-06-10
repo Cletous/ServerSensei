@@ -8,6 +8,7 @@ from app.schemas.user import (
     UserRoleUpdateRequest,
     UserStatusUpdateRequest,
 )
+from app.services.audit_service import create_audit_log
 
 router = APIRouter(
     prefix="/admin/users",
@@ -50,7 +51,26 @@ def update_user_role(
             detail="You cannot remove your own admin role"
         )
 
+    old_role = user.role
     user.role = request.role
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="USER_ROLE_CHANGED",
+        entity_type="user",
+        entity_id=user.id,
+        description=(
+            f"Admin {current_user.email} changed user {user.email} "
+            f"role from {old_role} to {request.role}"
+        ),
+        details={
+            "target_user_id": user.id,
+            "target_user_email": user.email,
+            "old_role": old_role,
+            "new_role": request.role,
+        },
+    )
 
     db.commit()
     db.refresh(user)
@@ -78,7 +98,28 @@ def update_user_status(
             detail="You cannot disable your own account"
         )
 
+    old_status = user.active
     user.active = request.active
+
+    audit_action = "USER_ENABLED" if request.active else "USER_DISABLED"
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action=audit_action,
+        entity_type="user",
+        entity_id=user.id,
+        description=(
+            f"Admin {current_user.email} changed user {user.email} "
+            f"active status from {old_status} to {request.active}"
+        ),
+        details={
+            "target_user_id": user.id,
+            "target_user_email": user.email,
+            "old_active": old_status,
+            "new_active": request.active,
+        },
+    )
 
     db.commit()
     db.refresh(user)

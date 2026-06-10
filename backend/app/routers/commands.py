@@ -88,6 +88,37 @@ def create_command(
     )
 
     db.add(command)
+    db.flush()
+
+    if command_status == "awaiting_approval":
+        audit_action = "COMMAND_APPROVAL_REQUESTED"
+        description = (
+            f"User {current_user.email} requested command "
+            f"{request.action} for device {device.device_id}"
+        )
+    else:
+        audit_action = "COMMAND_CREATED"
+        description = (
+            f"Admin {current_user.email} created command "
+            f"{request.action} for device {device.device_id}"
+        )
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        device_id=device.id,
+        action=audit_action,
+        entity_type="command",
+        entity_id=command.id,
+        description=description,
+        details={
+            "command_action": request.action,
+            "command_status": command_status,
+            "payload": request.payload,
+            "device_id": device.device_id,
+        },
+    )
+
     db.commit()
     db.refresh(command)
 
@@ -173,6 +204,25 @@ def approve_command(
     command.approved_by_user_id = current_user.id
     command.approved_at = datetime.now(timezone.utc)
 
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        device_id=device.id,
+        action="COMMAND_APPROVED",
+        entity_type="command",
+        entity_id=command.id,
+        description=(
+            f"Admin {current_user.email} approved command "
+            f"{command.action} for device {device.device_id}"
+        ),
+        details={
+            "command_action": command.action,
+            "payload": command.payload,
+            "device_id": device.device_id,
+            "requested_by_user_id": command.created_by_user_id,
+        },
+    )
+
     db.commit()
     db.refresh(command)
 
@@ -209,6 +259,25 @@ def reject_command(
     command.status = "rejected"
     command.rejected_by_user_id = current_user.id
     command.rejected_at = datetime.now(timezone.utc)
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        device_id=device.id,
+        action="COMMAND_REJECTED",
+        entity_type="command",
+        entity_id=command.id,
+        description=(
+            f"Admin {current_user.email} rejected command "
+            f"{command.action} for device {device.device_id}"
+        ),
+        details={
+            "command_action": command.action,
+            "payload": command.payload,
+            "device_id": device.device_id,
+            "requested_by_user_id": command.created_by_user_id,
+        },
+    )
 
     db.commit()
     db.refresh(command)
@@ -249,6 +318,24 @@ def report_command_result(
 
     command.status = request.status
     command.executed_at = datetime.now(timezone.utc)
+
+    create_audit_log(
+        db=db,
+        user_id=None,
+        device_id=device.id,
+        action="COMMAND_RESULT_REPORTED",
+        entity_type="command",
+        entity_id=command.id,
+        description=(
+            f"Device {device.device_id} reported command "
+            f"{command.action} as {request.status}"
+        ),
+        details={
+            "command_action": command.action,
+            "result_status": request.status,
+            "device_id": device.device_id,
+        },
+    )
 
     db.commit()
     db.refresh(command)

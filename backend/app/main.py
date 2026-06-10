@@ -13,8 +13,9 @@ from app.models import (
     power_status,
     device_setting,
     push_token,
+    audit_log,
 )
-from app.routers import alerts, auth, commands, devices, decision, power, push_tokens, telemetry, users
+from app.routers import alerts, audit_logs, auth, commands, devices, decision, power, push_tokens, telemetry, users
 from app.routers import settings as settings_router
 
 Base.metadata.create_all(bind=engine)
@@ -53,6 +54,7 @@ def health_check():
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(audit_logs.router)
 app.include_router(alerts.router)
 app.include_router(devices.router)
 app.include_router(power.router)
