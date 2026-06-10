@@ -11,7 +11,11 @@ def create_audit_log(
     entity_type: str | None = None,
     entity_id: int | None = None,
     details: dict[str, Any] | None = None,
+    result: str = "success",
 ) -> AuditLog:
+    safe_details = details.copy() if details else {}
+    safe_details["result"] = result
+
     audit_log = AuditLog(
         user_id=user_id,
         device_id=device_id,
@@ -19,7 +23,7 @@ def create_audit_log(
         entity_type=entity_type,
         entity_id=entity_id,
         description=description,
-        details=details,
+        details=safe_details,
     )
 
     db.add(audit_log)
