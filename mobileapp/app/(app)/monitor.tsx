@@ -45,15 +45,15 @@ export default function MonitorScreen() {
         <NavigationCard
           icon="analytics-outline"
           title="Trends"
-          description="Professional combined multi-line graph for temperature, humidity, air quality, battery, and load."
+          description="Individual telemetry graphs for temperature, humidity, air quality, battery, and load."
           onPress={() => router.push("/trends")}
         />
 
         <NavigationCard
           icon="server-outline"
-          title="Infrastructure"
-          description="Server relay states and cooling controls are managed under Operations."
-          onPress={() => router.push("/commands")}
+          title="Digital Twin"
+          description="Visual server room model showing power, UPS, cooling, load, and server relay states."
+          onPress={() => router.push("/digital-twin")}
         />
       </View>
     </ScrollView>

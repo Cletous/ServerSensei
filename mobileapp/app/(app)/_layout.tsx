@@ -148,6 +148,13 @@ function AppTabs() {
       />
 
       <Tabs.Screen
+        name="digital-twin"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
         name="admin"
         options={{
           href: isAdmin ? null : null,
