@@ -67,11 +67,13 @@ export async function getDecisionEvaluation(
     `/devices/${deviceId}/decision/evaluation`
   );
 
-  return response.data;
+  return normalizeOfflineEvaluation(response.data);
 }
 
-function normalizeOfflineEvaluation<T extends any>(evaluation: T): T {
-  if (!evaluation || evaluation.online !== false) {
+function normalizeOfflineEvaluation(
+  evaluation: DecisionEvaluation
+): DecisionEvaluation {
+  if (evaluation.online !== false) {
     return evaluation;
   }
 
