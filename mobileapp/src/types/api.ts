@@ -58,6 +58,18 @@ export type DecisionEvaluation = {
   power_updated_at: string | null;
 };
 
+export type AuditLogResponse = {
+  id: number;
+  user_id: number | null;
+  device_id: number | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: number | null;
+  description: string;
+  details: Record<string, unknown> | null;
+  created_at: string | null;
+};
+
 export type CommandResponse = {
   id: number;
   device_id: string;

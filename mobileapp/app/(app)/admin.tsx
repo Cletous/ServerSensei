@@ -14,6 +14,7 @@ import {
 import {
   approveCommand,
   getAdminUsers,
+  getAuditLogs,
   getCommandsAwaitingApproval,
   rejectCommand,
   updateAdminUserRole,
@@ -24,7 +25,12 @@ import {
   getStoredUserRole,
 } from "../../src/storage/authStorage";
 import { colors } from "../../src/theme/colors";
-import type { CommandResponse, UserItem, UserRole } from "../../src/types/api";
+import type {
+  AuditLogResponse,
+  CommandResponse,
+  UserItem,
+  UserRole,
+} from "../../src/types/api";
 
 const ROLES: UserRole[] = ["admin", "operator", "viewer"];
 
@@ -70,11 +76,60 @@ function formatDate(value: string | null) {
   });
 }
 
+function formatAuditAction(action: string) {
+  return action
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getAuditIcon(action: string) {
+  if (action.includes("APPROVED")) {
+    return "checkmark-circle-outline";
+  }
+
+  if (action.includes("REJECTED") || action.includes("DISABLED")) {
+    return "close-circle-outline";
+  }
+
+  if (action.includes("ROLE")) {
+    return "shield-checkmark-outline";
+  }
+
+  if (action.includes("COMMAND")) {
+    return "terminal-outline";
+  }
+
+  if (action.includes("ENABLED")) {
+    return "person-add-outline";
+  }
+
+  return "time-outline";
+}
+
+function getAuditColor(action: string) {
+  if (action.includes("APPROVED") || action.includes("ENABLED")) {
+    return colors.primary;
+  }
+
+  if (action.includes("REJECTED") || action.includes("DISABLED")) {
+    return colors.critical;
+  }
+
+  if (action.includes("ROLE")) {
+    return colors.info;
+  }
+
+  return colors.secondary;
+}
+
 export default function AdminScreen() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [approvals, setApprovals] = useState<CommandResponse[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingApprovals, setLoadingApprovals] = useState(true);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(true);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
@@ -136,6 +191,22 @@ export default function AdminScreen() {
     }
   }
 
+  async function loadAuditLogs(showError = true) {
+    try {
+      const data = await getAuditLogs(30);
+      setAuditLogs(data);
+    } catch {
+      if (showError) {
+        Alert.alert(
+          "Activity log unavailable",
+          "Could not load recent admin activity.",
+        );
+      }
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  }
+
   useEffect(() => {
     async function checkAccessAndLoadUsers() {
       const role = await getStoredUserRole();
@@ -156,6 +227,7 @@ export default function AdminScreen() {
 
       await loadUsers();
       await loadApprovals(false);
+      await loadAuditLogs(false);
     }
 
     checkAccessAndLoadUsers();
@@ -165,6 +237,7 @@ export default function AdminScreen() {
     setRefreshing(true);
     await loadUsers(false);
     await loadApprovals(false);
+    await loadAuditLogs(false);
     setRefreshing(false);
   }
 
@@ -202,6 +275,7 @@ export default function AdminScreen() {
       setBusyUserId(user.id);
       await updateAdminUserRole(user.id, { role });
       await loadUsers(false);
+      await loadAuditLogs(false);
     } catch {
       Alert.alert("Update failed", "Could not update user role.");
     } finally {
@@ -241,6 +315,7 @@ export default function AdminScreen() {
       setBusyUserId(user.id);
       await updateAdminUserStatus(user.id, { active: !user.active });
       await loadUsers(false);
+      await loadAuditLogs(false);
     } catch {
       Alert.alert("Update failed", "Could not update user status.");
     } finally {
@@ -270,6 +345,7 @@ export default function AdminScreen() {
       setBusyCommandId(commandId);
       await approveCommand(commandId);
       await loadApprovals(false);
+      await loadAuditLogs(false);
 
       Alert.alert(
         "Command approved",
@@ -305,6 +381,7 @@ export default function AdminScreen() {
       setBusyCommandId(commandId);
       await rejectCommand(commandId);
       await loadApprovals(false);
+      await loadAuditLogs(false);
 
       Alert.alert(
         "Command rejected",
@@ -450,6 +527,78 @@ export default function AdminScreen() {
                       {isBusy ? "Working..." : "Approve"}
                     </Text>
                   </Pressable>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+
+      <View style={styles.auditSection}>
+        <View style={styles.auditHeader}>
+          <View>
+            <Text style={styles.auditTitle}>Recent Activity</Text>
+            <Text style={styles.auditSubtitle}>
+              Audit trail of supervised commands and admin actions.
+            </Text>
+          </View>
+
+          <View style={styles.auditCountBadge}>
+            <Text style={styles.auditCountText}>{auditLogs.length}</Text>
+          </View>
+        </View>
+
+        {loadingAuditLogs ? (
+          <View style={styles.auditLoadingCard}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.auditLoadingText}>
+              Loading recent activity...
+            </Text>
+          </View>
+        ) : auditLogs.length === 0 ? (
+          <View style={styles.emptyAuditCard}>
+            <Ionicons name="time-outline" size={30} color={colors.primary} />
+            <Text style={styles.emptyAuditTitle}>No activity yet</Text>
+            <Text style={styles.emptyAuditText}>
+              Command approvals, rejections, and user management changes will
+              appear here.
+            </Text>
+          </View>
+        ) : (
+          auditLogs.map((log) => {
+            const auditColor = getAuditColor(log.action);
+
+            return (
+              <View key={log.id} style={styles.auditCard}>
+                <View style={styles.auditIconWrap}>
+                  <Ionicons
+                    name={
+                      getAuditIcon(log.action) as keyof typeof Ionicons.glyphMap
+                    }
+                    size={20}
+                    color={auditColor}
+                  />
+                </View>
+
+                <View style={styles.auditContent}>
+                  <Text style={styles.auditAction}>
+                    {formatAuditAction(log.action)}
+                  </Text>
+
+                  <Text style={styles.auditDescription}>{log.description}</Text>
+
+                  <View style={styles.auditMetaRow}>
+                    <Text style={styles.auditMetaText}>
+                      {formatDate(log.created_at)}
+                    </Text>
+
+                    {log.entity_type ? (
+                      <Text style={styles.auditEntityPill}>
+                        {log.entity_type}
+                        {log.entity_id ? ` #${log.entity_id}` : ""}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
               </View>
             );
@@ -1154,5 +1303,133 @@ const styles = StyleSheet.create({
   },
   disabledActionButton: {
     opacity: 0.6,
+  },
+  auditSection: {
+    marginTop: 4,
+    marginBottom: 18,
+  },
+  auditHeader: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+  auditTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  auditSubtitle: {
+    marginTop: 4,
+    color: colors.mutedText,
+    fontWeight: "700",
+    lineHeight: 19,
+  },
+  auditCountBadge: {
+    minWidth: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  auditCountText: {
+    color: colors.primaryDark,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  auditLoadingCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+    alignItems: "center",
+    gap: 10,
+  },
+  auditLoadingText: {
+    color: colors.mutedText,
+    fontWeight: "800",
+  },
+  emptyAuditCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyAuditTitle: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  emptyAuditText: {
+    marginTop: 4,
+    color: colors.mutedText,
+    textAlign: "center",
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  auditCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: "row",
+    gap: 12,
+  },
+  auditIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  auditContent: {
+    flex: 1,
+  },
+  auditAction: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  auditDescription: {
+    marginTop: 4,
+    color: colors.mutedText,
+    fontWeight: "700",
+    lineHeight: 19,
+  },
+  auditMetaRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  auditMetaText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  auditEntityPill: {
+    backgroundColor: colors.background,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    color: colors.secondary,
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "capitalize",
   },
 });

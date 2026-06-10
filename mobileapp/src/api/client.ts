@@ -4,6 +4,7 @@ import { API_BASE_URL } from "../config/api";
 import { getToken } from "../storage/authStorage";
 import type {
   AlertItem,
+  AuditLogResponse,
   CommandCreateRequest,
   CommandResponse,
   DecisionEvaluation,
@@ -48,6 +49,14 @@ export async function loginUser(
 
 export async function getDevices(): Promise<Device[]> {
   const response = await apiClient.get<Device[]>("/devices");
+  return response.data;
+}
+
+export async function getAuditLogs(limit = 50): Promise<AuditLogResponse[]> {
+  const response = await apiClient.get<AuditLogResponse[]>(
+    `/admin/audit-logs?limit=${limit}`,
+  );
+
   return response.data;
 }
 
