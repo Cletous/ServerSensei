@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from sqlalchemy.orm import Session
+from app.core.timezone import local_now
 
 from app.models.alert import Alert
 from app.models.device import Device
@@ -24,7 +25,7 @@ def alert_exists_recently(
     alert_type: str,
     minutes: int = ALERT_DEDUP_MINUTES
 ) -> bool:
-    cutoff_time = datetime.now() - timedelta(minutes=minutes)
+    cutoff_time = local_now() - timedelta(minutes=minutes)
 
     existing_alert = db.query(Alert).filter(
         Alert.device_id == device_id,
@@ -198,7 +199,7 @@ def check_telemetry_alerts(
             continue
 
         if alert.created_at is None:
-            alert.created_at = datetime.now(timezone.utc)
+            alert.created_at = local_now()
 
         db.add(alert)
         db.flush()

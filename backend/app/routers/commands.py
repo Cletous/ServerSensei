@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from app.core.timezone import local_now
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -289,7 +289,7 @@ def approve_command(
 
     command.status = "pending"
     command.approved_by_user_id = current_user.id
-    command.approved_at = datetime.now(timezone.utc)
+    command.approved_at = local_now()
 
     create_audit_log(
         db=db,
@@ -345,7 +345,7 @@ def reject_command(
 
     command.status = "rejected"
     command.rejected_by_user_id = current_user.id
-    command.rejected_at = datetime.now(timezone.utc)
+    command.rejected_at = local_now()
 
     create_audit_log(
         db=db,
@@ -404,7 +404,7 @@ def report_command_result(
         )
 
     command.status = request.status
-    command.executed_at = datetime.now(timezone.utc)
+    command.executed_at = local_now()
 
     create_audit_log(
         db=db,

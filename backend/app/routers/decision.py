@@ -1,4 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from app.core.timezone import local_now
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -100,7 +102,7 @@ def get_device_decision_evaluation(
         PowerStatus.device_id == device.id
     ).first()
 
-    recent_cutoff = datetime.now() - timedelta(minutes=10)
+    recent_cutoff = local_now() - timedelta(minutes=10)
 
     recent_alerts = db.query(Alert).filter(
         Alert.device_id == device.id,

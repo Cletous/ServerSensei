@@ -36,6 +36,10 @@ export default function AlertsScreen() {
     const alertTime = new Date(alert.created_at).getTime();
     const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
 
+    if (Number.isNaN(alertTime)) {
+      return false;
+    }
+
     return alertTime >= tenMinutesAgo;
   });
 

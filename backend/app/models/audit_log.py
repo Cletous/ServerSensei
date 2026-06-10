@@ -1,5 +1,5 @@
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String
-from sqlalchemy.sql import func
+from app.core.timezone import local_now
 from app.core.database import Base
 
 class AuditLog(Base):
@@ -30,5 +30,5 @@ class AuditLog(Base):
 
     created_at = Column(
         DateTime(timezone=True),
-        server_default=func.now()
+        default=local_now
     )

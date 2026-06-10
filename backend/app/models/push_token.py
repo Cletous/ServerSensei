@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.sql import func
+from app.core.timezone import local_now
 from app.core.database import Base
 
 class PushToken(Base):
@@ -20,11 +20,11 @@ class PushToken(Base):
 
     created_at = Column(
         DateTime(timezone=True),
-        server_default=func.now()
+        default=local_now
     )
 
     updated_at = Column(
         DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
+        default=local_now,
+        onupdate=local_now
     )

@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from sqlalchemy.orm import Session
+from app.core.timezone import local_now
 from app.models.alert import Alert
 from app.models.device import Device
 from app.models.device_status import DeviceStatus
@@ -7,7 +8,7 @@ from app.models.device_status import DeviceStatus
 OFFLINE_THRESHOLD_SECONDS = 30
 
 def update_device_online_states(db: Session):
-    now = datetime.now()
+    now = local_now()
     offline_cutoff = now - timedelta(seconds=OFFLINE_THRESHOLD_SECONDS)
 
     statuses = db.query(DeviceStatus).all()

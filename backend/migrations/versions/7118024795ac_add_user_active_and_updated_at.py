@@ -35,7 +35,7 @@ def upgrade() -> None:
     if not column_exists("users", "updated_at"):
         op.add_column(
             "users",
-            sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True)
+            sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.local_now, nullable=True)
         )
 
 

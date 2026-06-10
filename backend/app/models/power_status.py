@@ -1,5 +1,5 @@
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
-from sqlalchemy.sql import func
+from app.core.timezone import local_now
 from app.core.database import Base
 
 class PowerStatus(Base):
@@ -20,6 +20,6 @@ class PowerStatus(Base):
 
     updated_at = Column(
         DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
+        default=local_now,
+        onupdate=local_now
     )

@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "ServerSensei Backend"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
+    APP_TIMEZONE: str = "Africa/Harare"
 
     DATABASE_URL: str
 

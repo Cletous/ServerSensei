@@ -32,8 +32,8 @@ def upgrade() -> None:
             sa.Column("token", sa.String(length=255), nullable=False),
             sa.Column("platform", sa.String(length=50), nullable=True),
             sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
-            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
-            sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.local_now, nullable=True),
+            sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.local_now, nullable=True),
             sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
             sa.PrimaryKeyConstraint("id"),
         )
