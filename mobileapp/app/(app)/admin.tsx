@@ -76,6 +76,70 @@ function formatDate(value: string | null) {
   });
 }
 
+function formatAuditDateTime(value: string | null) {
+  if (!value) {
+    return "Not available";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not available";
+  }
+
+  const datePart = date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const timePart = date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  return `${datePart} @${timePart}`;
+}
+
+function formatAuditEntity(log: AuditLogResponse) {
+  if (!log.entity_type) {
+    return `audit #${log.id}`;
+  }
+
+  if (log.entity_id) {
+    return `${log.entity_type} #${log.entity_id}`;
+  }
+
+  return log.entity_type;
+}
+
+function formatAuditDetails(log: AuditLogResponse) {
+  const detailsText = log.details
+    ? JSON.stringify(log.details, null, 2)
+    : "No extra details were recorded for this audit item.";
+
+  return [
+    `Action: ${formatAuditAction(log.action)}`,
+    `Time: ${formatAuditDateTime(log.created_at)}`,
+    `Entity: ${formatAuditEntity(log)}`,
+    `User ID: ${log.user_id ?? "Not recorded"}`,
+    `Device ID: ${log.device_id ?? "Not recorded"}`,
+    "",
+    "Description:",
+    log.description,
+    "",
+    "Details:",
+    detailsText,
+  ].join("\n");
+}
+
+function showAuditDetails(log: AuditLogResponse) {
+  Alert.alert("Audit Trail Details", formatAuditDetails(log), [
+    { text: "Close", style: "cancel" },
+  ]);
+}
+
 function formatAuditAction(action: string) {
   return action
     .toLowerCase()
@@ -569,7 +633,14 @@ export default function AdminScreen() {
             const auditColor = getAuditColor(log.action);
 
             return (
-              <View key={log.id} style={styles.auditCard}>
+              <Pressable
+                key={log.id}
+                style={({ pressed }) => [
+                  styles.auditCard,
+                  pressed && styles.auditCardPressed,
+                ]}
+                onPress={() => showAuditDetails(log)}
+              >
                 <View style={styles.auditIconWrap}>
                   <Ionicons
                     name={
@@ -589,18 +660,18 @@ export default function AdminScreen() {
 
                   <View style={styles.auditMetaRow}>
                     <Text style={styles.auditMetaText}>
-                      {formatDate(log.created_at)}
+                      {formatAuditDateTime(log.created_at)}{" "}
+                      {formatAuditEntity(log)}
                     </Text>
 
-                    {log.entity_type ? (
-                      <Text style={styles.auditEntityPill}>
-                        {log.entity_type}
-                        {log.entity_id ? ` #${log.entity_id}` : ""}
-                      </Text>
-                    ) : null}
+                    <Ionicons
+                      name="chevron-forward-outline"
+                      size={16}
+                      color={colors.mutedText}
+                    />
                   </View>
                 </View>
-              </View>
+              </Pressable>
             );
           })
         )}
@@ -1387,6 +1458,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     flexDirection: "row",
     gap: 12,
+  },
+  auditCardPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.99 }],
   },
   auditIconWrap: {
     width: 42,

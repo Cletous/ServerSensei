@@ -144,6 +144,13 @@ void controlFan(float temperature)
         return;
     }
 
+    if (deviceMode == "manual")
+    {
+        Serial.println("[Fan] Manual mode active, automatic cooling skipped");
+        applyRelayStates();
+        return;
+    }
+
     bool environmentalRiskRequiresCooling =
         environmentalRisk == "high" ||
         environmentalRisk == "critical";
