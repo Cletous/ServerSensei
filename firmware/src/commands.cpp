@@ -82,11 +82,13 @@ bool commandRequiresManualMode(String actionValue)
         actionValue == "fan_on" ||
         actionValue == "fan_off" ||
         actionValue == "set_fan" ||
-        actionValue == "set_relay" ||
         actionValue == "server_on" ||
         actionValue == "server_off" ||
         actionValue == "restart_server" ||
         actionValue == "restart_all_servers" ||
+        actionValue == "power_all_servers" ||
+        actionValue == "shutdown_all_servers" ||
+        actionValue == "set_relay" ||
         actionValue == "normal" ||
         actionValue == "low_runtime" ||
         actionValue == "critical_runtime" ||
@@ -296,6 +298,16 @@ bool executeCommand(JsonObject command)
     if (actionValue == "restart_all_servers")
     {
         return restartAllServers();
+    }
+
+    if (actionValue == "power_all_servers")
+    {
+        return powerAllServers();
+    }
+
+    if (actionValue == "shutdown_all_servers")
+    {
+        return shutdownAllServers();
     }
 
     if (actionValue == "set_battery_percent")

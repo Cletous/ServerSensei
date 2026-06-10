@@ -156,6 +156,11 @@ def get_device_decision_evaluation(
         fan_on=latest_reading.fan_on if latest_reading else None,
         cooling_reason=latest_reading.cooling_reason if latest_reading else None,
 
+        non_critical_server_a_on=latest_reading.non_critical_server_a_on if latest_reading else None,
+        non_critical_server_b_on=latest_reading.non_critical_server_b_on if latest_reading else None,
+        critical_server_a_on=latest_reading.critical_server_a_on if latest_reading else None,
+        critical_server_b_on=latest_reading.critical_server_b_on if latest_reading else None,
+
         environmental_risk=environmental_risk,
         system_recommendation=(
             latest_reading.system_recommendation

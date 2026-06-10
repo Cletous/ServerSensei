@@ -54,6 +54,12 @@ void sendTelemetryToBackend()
     // Cooling status
     doc["fan_on"] = fanRelayState;
 
+    // Simulated server relay states
+    doc["non_critical_server_a_on"] = nonCriticalServerAState;
+    doc["non_critical_server_b_on"] = nonCriticalServerBState;
+    doc["critical_server_a_on"] = criticalServerAState;
+    doc["critical_server_b_on"] = criticalServerBState;
+
     if (loadState == "all_off" || simulatedPowerDepleted)
     {
         doc["cooling_reason"] = "Cooling disabled because system is all_off or simulated power is depleted";

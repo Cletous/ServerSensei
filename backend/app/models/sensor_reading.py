@@ -30,6 +30,11 @@ class SensorReading(Base):
     fan_on = Column(Boolean, nullable=True)
     cooling_reason = Column(String(255), nullable=True)
 
+    non_critical_server_a_on = Column(Boolean, nullable=True)
+    non_critical_server_b_on = Column(Boolean, nullable=True)
+    critical_server_a_on = Column(Boolean, nullable=True)
+    critical_server_b_on = Column(Boolean, nullable=True)
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()

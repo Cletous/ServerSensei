@@ -58,6 +58,11 @@ def receive_telemetry(
 
         fan_on=request.fan_on,
         cooling_reason=request.cooling_reason,
+
+        non_critical_server_a_on=request.non_critical_server_a_on,
+        non_critical_server_b_on=request.non_critical_server_b_on,
+        critical_server_a_on=request.critical_server_a_on,
+        critical_server_b_on=request.critical_server_b_on,
     )
 
     db.add(sensor_reading)

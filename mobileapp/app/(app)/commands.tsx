@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
-import { createCommand } from "../../src/api/client";
+import { createCommand, getDecisionEvaluation } from "../../src/api/client";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../src/theme/colors";
@@ -24,6 +24,10 @@ const MANUAL_ONLY_COMMANDS = [
   "server_on",
   "server_off",
   "set_relay",
+  "restart_server",
+  "restart_all_servers",
+  "power_all_servers",
+  "shutdown_all_servers",
   "set_load_state",
   "normal",
   "low_runtime",
@@ -38,9 +42,33 @@ type ServerId =
   | "critical_a"
   | "critical_b";
 
+type ServerStateKey =
+  | "non_critical_server_a_on"
+  | "non_critical_server_b_on"
+  | "critical_server_a_on"
+  | "critical_server_b_on";
+
+const SERVER_STATE_KEYS: Record<ServerId, ServerStateKey> = {
+  non_critical_a: "non_critical_server_a_on",
+  non_critical_b: "non_critical_server_b_on",
+  critical_a: "critical_server_a_on",
+  critical_b: "critical_server_b_on",
+};
+
 export default function CommandsScreen() {
   const insets = useSafeAreaInsets();
   const [sendingCommand, setSendingCommand] = useState(false);
+
+  const [loadingState, setLoadingState] = useState(true);
+  const [currentMode, setCurrentMode] = useState<"manual" | "automatic">(
+    "automatic",
+  );
+  const [serverStates, setServerStates] = useState<Record<ServerId, boolean>>({
+    non_critical_a: false,
+    non_critical_b: false,
+    critical_a: false,
+    critical_b: false,
+  });
 
   async function sendCommand(
     action: string,
@@ -65,6 +93,10 @@ export default function CommandsScreen() {
           "Command Queued",
           "The command has been queued for the ESP32.",
         );
+
+        setTimeout(() => {
+          loadCurrentDeviceState();
+        }, 1000);
       }
     } catch (error: any) {
       const backendMessage = error?.response?.data?.detail;
@@ -99,10 +131,20 @@ export default function CommandsScreen() {
   }
 
   function serverOn(server: ServerId) {
+    setServerStates((current) => ({
+      ...current,
+      [server]: true,
+    }));
+
     return sendCommand("server_on", { server });
   }
 
   function serverOff(server: ServerId) {
+    setServerStates((current) => ({
+      ...current,
+      [server]: false,
+    }));
+
     return sendCommand("server_off", { server });
   }
 
@@ -111,7 +153,57 @@ export default function CommandsScreen() {
   }
 
   function restartAllServers() {
+    setServerStates({
+      non_critical_a: true,
+      non_critical_b: true,
+      critical_a: true,
+      critical_b: true,
+    });
+
     return sendCommand("restart_all_servers", {});
+  }
+
+  function powerAllServers() {
+    setServerStates({
+      non_critical_a: true,
+      non_critical_b: true,
+      critical_a: true,
+      critical_b: true,
+    });
+
+    return sendCommand("power_all_servers", {});
+  }
+
+  function shutdownAllServers() {
+    setServerStates({
+      non_critical_a: false,
+      non_critical_b: false,
+      critical_a: false,
+      critical_b: false,
+    });
+
+    return sendCommand("shutdown_all_servers", {});
+  }
+
+  async function loadCurrentDeviceState() {
+    try {
+      setLoadingState(true);
+
+      const evaluation = await getDecisionEvaluation(DEFAULT_DEVICE_ID);
+
+      setCurrentMode(evaluation.mode === "manual" ? "manual" : "automatic");
+
+      setServerStates({
+        non_critical_a: Boolean(evaluation.non_critical_server_a_on),
+        non_critical_b: Boolean(evaluation.non_critical_server_b_on),
+        critical_a: Boolean(evaluation.critical_server_a_on),
+        critical_b: Boolean(evaluation.critical_server_b_on),
+      });
+    } catch (error) {
+      console.log("Could not load command state", error);
+    } finally {
+      setLoadingState(false);
+    }
   }
 
   async function setFan(on: boolean) {
@@ -123,6 +215,16 @@ export default function CommandsScreen() {
       battery_percent: batteryPercent,
     });
   }
+
+  useEffect(() => {
+    loadCurrentDeviceState();
+
+    const intervalId = setInterval(() => {
+      loadCurrentDeviceState();
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <ScrollView
@@ -142,25 +244,55 @@ export default function CommandsScreen() {
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryCommandButton}
-        onPress={() => sendCommand("set_mode", { mode: "manual" })}
-      >
-        <Ionicons name="construct-outline" size={20} color={colors.white} />
-        <Text style={styles.primaryCommandButtonText}>
-          Switch to Manual Mode
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.card}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.cardTitle}>Device Control Mode</Text>
+            <Text style={styles.muted}>
+              Manual mode enables direct hardware control. Automatic mode lets
+              the ESP32 intelligence manage cooling and load response.
+            </Text>
+          </View>
 
-      <TouchableOpacity
-        style={styles.secondaryCommandButton}
-        onPress={() => sendCommand("set_mode", { mode: "monitor" })}
-      >
-        <Ionicons name="sync-outline" size={20} color={colors.primary} />
-        <Text style={styles.secondaryCommandButtonText}>
-          Return to Automatic Mode
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.iconBadge}>
+            <Ionicons
+              name="options-outline"
+              size={22}
+              color={colors.primaryDark}
+            />
+          </View>
+        </View>
+
+        <View style={styles.toggleRow}>
+          <View>
+            <Text style={styles.toggleTitle}>
+              {currentMode === "manual" ? "Manual Mode" : "Automatic Mode"}
+            </Text>
+            <Text style={styles.toggleSubtitle}>
+              {currentMode === "manual"
+                ? "Direct operator control is active"
+                : "Predictive control is active"}
+            </Text>
+          </View>
+
+          <Switch
+            value={currentMode === "manual"}
+            disabled={sendingCommand || loadingState}
+            onValueChange={(enabled) => {
+              const nextMode = enabled ? "manual" : "automatic";
+              setCurrentMode(nextMode);
+              setDeviceMode(nextMode);
+            }}
+            trackColor={{
+              false: colors.border,
+              true: colors.primarySoft,
+            }}
+            thumbColor={
+              currentMode === "manual" ? colors.primaryDark : colors.mutedText
+            }
+          />
+        </View>
+      </View>
 
       <View style={styles.manualModeNotice}>
         <View style={styles.manualModeIconWrap}>
@@ -238,8 +370,8 @@ export default function CommandsScreen() {
           <View style={styles.sectionHeaderText}>
             <Text style={styles.cardTitle}>Server Control Center</Text>
             <Text style={styles.muted}>
-              Individually control each simulated server relay. Load percentage
-              is recalculated from the servers currently powered ON.
+              Toggle individual simulated server relays. Load percentage is
+              recalculated from servers currently powered ON.
             </Text>
           </View>
 
@@ -252,10 +384,59 @@ export default function CommandsScreen() {
           </View>
         </View>
 
+        <View style={styles.bulkActionRow}>
+          <CommandButton
+            label="Power All"
+            disabled={sendingCommand}
+            onPress={powerAllServers}
+          />
+
+          <CommandButton
+            label="Shutdown All"
+            disabled={sendingCommand}
+            danger
+            onPress={() =>
+              Alert.alert(
+                "Shutdown all simulated servers?",
+                "This will turn OFF all simulated server relays.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Shutdown All",
+                    style: "destructive",
+                    onPress: shutdownAllServers,
+                  },
+                ],
+              )
+            }
+          />
+
+          <CommandButton
+            label="Restart All"
+            disabled={sendingCommand}
+            danger
+            onPress={() =>
+              Alert.alert(
+                "Restart all simulated servers?",
+                "All simulated server relays will briefly turn OFF, then turn back ON.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Restart All",
+                    style: "destructive",
+                    onPress: restartAllServers,
+                  },
+                ],
+              )
+            }
+          />
+        </View>
+
         <ServerControlRow
           title="Non-Critical Server A"
           serverId="non_critical_a"
-          disabled={sendingCommand}
+          isOn={serverStates.non_critical_a}
+          disabled={sendingCommand || loadingState}
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -264,7 +445,8 @@ export default function CommandsScreen() {
         <ServerControlRow
           title="Non-Critical Server B"
           serverId="non_critical_b"
-          disabled={sendingCommand}
+          isOn={serverStates.non_critical_b}
+          disabled={sendingCommand || loadingState}
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -273,7 +455,8 @@ export default function CommandsScreen() {
         <ServerControlRow
           title="Critical Server A"
           serverId="critical_a"
-          disabled={sendingCommand}
+          isOn={serverStates.critical_a}
+          disabled={sendingCommand || loadingState}
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
@@ -282,30 +465,11 @@ export default function CommandsScreen() {
         <ServerControlRow
           title="Critical Server B"
           serverId="critical_b"
-          disabled={sendingCommand}
+          isOn={serverStates.critical_b}
+          disabled={sendingCommand || loadingState}
           onServerOn={serverOn}
           onServerOff={serverOff}
           onRestartServer={restartServer}
-        />
-
-        <CommandButton
-          label="Restart All Servers"
-          disabled={sendingCommand}
-          danger
-          onPress={() =>
-            Alert.alert(
-              "Restart all simulated servers?",
-              "All simulated server relays will briefly turn OFF, then turn back ON.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Restart All",
-                  style: "destructive",
-                  onPress: restartAllServers,
-                },
-              ],
-            )
-          }
         />
       </View>
 
@@ -383,6 +547,7 @@ export default function CommandsScreen() {
 function ServerControlRow({
   title,
   serverId,
+  isOn,
   disabled,
   onServerOn,
   onServerOff,
@@ -390,6 +555,7 @@ function ServerControlRow({
 }: {
   title: string;
   serverId: ServerId;
+  isOn: boolean;
   disabled?: boolean;
   onServerOn: (server: ServerId) => void;
   onServerOff: (server: ServerId) => void;
@@ -398,40 +564,60 @@ function ServerControlRow({
   return (
     <View style={styles.serverControlRow}>
       <View style={styles.serverControlHeader}>
-        <Ionicons name="hardware-chip-outline" size={18} color={colors.text} />
-        <Text style={styles.serverControlTitle}>{title}</Text>
+        <View style={styles.serverTitleRow}>
+          <Ionicons
+            name="hardware-chip-outline"
+            size={18}
+            color={isOn ? colors.success : colors.mutedText}
+          />
+          <View>
+            <Text style={styles.serverControlTitle}>{title}</Text>
+            <Text
+              style={[
+                styles.serverStatusText,
+                isOn ? styles.serverStatusOn : styles.serverStatusOff,
+              ]}
+            >
+              {isOn ? "ON" : "OFF"}
+            </Text>
+          </View>
+        </View>
+
+        <Switch
+          value={isOn}
+          disabled={disabled}
+          onValueChange={(enabled) => {
+            if (enabled) {
+              onServerOn(serverId);
+            } else {
+              onServerOff(serverId);
+            }
+          }}
+          trackColor={{
+            false: colors.border,
+            true: colors.primarySoft,
+          }}
+          thumbColor={isOn ? colors.success : colors.mutedText}
+        />
       </View>
 
-      <View style={styles.serverControlActions}>
-        <CommandButton
-          label="ON"
-          disabled={disabled}
-          onPress={() => onServerOn(serverId)}
-        />
-        <CommandButton
-          label="OFF"
-          disabled={disabled}
-          danger
-          onPress={() => onServerOff(serverId)}
-        />
-        <CommandButton
-          label="Restart"
-          disabled={disabled}
-          onPress={() =>
-            Alert.alert(
-              `Restart ${title}?`,
-              "This simulated server relay will briefly turn OFF, then turn back ON.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Restart",
-                  onPress: () => onRestartServer(serverId),
-                },
-              ],
-            )
-          }
-        />
-      </View>
+      <CommandButton
+        label="Restart"
+        disabled={disabled || !isOn}
+        onPress={() =>
+          Alert.alert(
+            `Restart ${title}?`,
+            "This simulated server relay will briefly turn OFF, then turn back ON.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Restart",
+                onPress: () => onRestartServer(serverId),
+              },
+            ],
+          )
+        }
+      />
     </View>
   );
 }
@@ -655,5 +841,59 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#F9FAFB",
+  },
+
+  toggleTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  toggleSubtitle: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  bulkActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+
+  serverTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+
+  serverStatusText: {
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+
+  serverStatusOn: {
+    color: colors.success,
+  },
+
+  serverStatusOff: {
+    color: colors.mutedText,
   },
 });

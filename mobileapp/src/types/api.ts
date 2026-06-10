@@ -52,6 +52,11 @@ export type DecisionEvaluation = {
   fan_on: boolean | null;
   cooling_reason: string | null;
 
+  non_critical_server_a_on: boolean | null;
+  non_critical_server_b_on: boolean | null;
+  critical_server_a_on: boolean | null;
+  critical_server_b_on: boolean | null;
+
   alert_count_recent: number;
   highest_recent_severity: string | null;
   recent_alerts: RecentAlert[];

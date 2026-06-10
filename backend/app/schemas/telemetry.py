@@ -22,6 +22,11 @@ class TelemetryRequest(BaseModel):
     environmental_risk: str | None = None
     system_recommendation: str | None = None
 
+    non_critical_server_a_on: bool | None = None
+    non_critical_server_b_on: bool | None = None
+    critical_server_a_on: bool | None = None
+    critical_server_b_on: bool | None = None
+
 class TelemetryResponse(BaseModel):
     message: str
 
@@ -42,6 +47,11 @@ class TelemetryReadingResponse(BaseModel):
 
     environmental_risk: str | None = None
     system_recommendation: str | None = None
+
+    non_critical_server_a_on: bool | None = None
+    non_critical_server_b_on: bool | None = None
+    critical_server_a_on: bool | None = None
+    critical_server_b_on: bool | None = None
 
     created_at: datetime
 

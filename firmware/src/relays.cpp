@@ -218,6 +218,46 @@ bool restartAllServers()
     return true;
 }
 
+bool powerAllServers()
+{
+    if (simulatedPowerDepleted)
+    {
+        Serial.println("[Servers] Cannot power all servers ON: simulated power is depleted");
+        return false;
+    }
+
+    Serial.println("[Servers] Powering all simulated servers ON");
+
+    nonCriticalServerAState = true;
+    nonCriticalServerBState = true;
+    criticalServerAState = true;
+    criticalServerBState = true;
+
+    loadState = "manual_override";
+    applyRelayStates();
+
+    Serial.println("[Servers] All simulated servers are now ON");
+
+    return true;
+}
+
+bool shutdownAllServers()
+{
+    Serial.println("[Servers] Shutting down all simulated servers");
+
+    nonCriticalServerAState = false;
+    nonCriticalServerBState = false;
+    criticalServerAState = false;
+    criticalServerBState = false;
+
+    loadState = "manual_override";
+    applyRelayStates();
+
+    Serial.println("[Servers] All simulated servers are now OFF");
+
+    return true;
+}
+
 void controlFan(float temperature)
 {
     if (isnan(temperature))
