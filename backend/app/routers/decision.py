@@ -111,9 +111,13 @@ def get_device_decision_evaluation(
         Alert.created_at.desc()
     ).limit(10).all()
 
+    is_offline_shutdown = device.online is False
+
     estimated_runtime_minutes = None
 
-    if power_status:
+    if is_offline_shutdown:
+        estimated_runtime_minutes = 0
+    elif power_status:
         estimated_runtime_minutes = estimate_ups_runtime_minutes(
             power_source=power_status.power_source,
             battery_percent=power_status.battery_percent,
@@ -132,12 +136,18 @@ def get_device_decision_evaluation(
         else None
     )
 
-    evaluation_summary = build_evaluation_summary(
-        environmental_risk=environmental_risk,
-        power_source=power_source,
-        estimated_runtime_minutes=estimated_runtime_minutes,
-        recent_alerts=recent_alerts
-    )
+    if is_offline_shutdown:
+        evaluation_summary = (
+            "Device is offline after full shutdown. UPS battery is depleted, "
+            "runtime is 0 minutes, and all simulated server loads are off."
+        )
+    else:
+        evaluation_summary = build_evaluation_summary(
+            environmental_risk=environmental_risk,
+            power_source=power_source,
+            estimated_runtime_minutes=estimated_runtime_minutes,
+            recent_alerts=recent_alerts
+        )
 
     return DecisionEvaluationResponse(
         device_id=device.device_id,
@@ -150,19 +160,23 @@ def get_device_decision_evaluation(
         air_quality_raw=latest_reading.air_quality_raw if latest_reading else None,
         air_quality_status=latest_reading.air_quality_status if latest_reading else None,
 
-        power_source=power_status.power_source if power_status else None,
-        battery_percent=power_status.battery_percent if power_status else None,
-        load_percent=power_status.load_percent if power_status else None,
+        power_source="offline" if is_offline_shutdown else (power_status.power_source if power_status else None),
+        battery_percent=0 if is_offline_shutdown else (power_status.battery_percent if power_status else None),
+        load_percent=0 if is_offline_shutdown else (power_status.load_percent if power_status else None),
         estimated_runtime_minutes=estimated_runtime_minutes,
 
-        fan_on=latest_reading.fan_on if latest_reading else None,
-        cooling_reason=latest_reading.cooling_reason if latest_reading else None,
+        fan_on=False if is_offline_shutdown else (latest_reading.fan_on if latest_reading else None),
+        cooling_reason=(
+            "System fully shut down; cooling fan is off."
+            if is_offline_shutdown
+            else (latest_reading.cooling_reason if latest_reading else None)
+        ),
 
-        non_critical_server_a_on=latest_reading.non_critical_server_a_on if latest_reading else None,
-        non_critical_server_b_on=latest_reading.non_critical_server_b_on if latest_reading else None,
-        critical_server_a_on=latest_reading.critical_server_a_on if latest_reading else None,
-        critical_server_b_on=latest_reading.critical_server_b_on if latest_reading else None,
-
+        non_critical_server_a_on=False if is_offline_shutdown else (latest_reading.non_critical_server_a_on if latest_reading else None),
+        non_critical_server_b_on=False if is_offline_shutdown else (latest_reading.non_critical_server_b_on if latest_reading else None),
+        critical_server_a_on=False if is_offline_shutdown else (latest_reading.critical_server_a_on if latest_reading else None),
+        critical_server_b_on=False if is_offline_shutdown else (latest_reading.critical_server_b_on if latest_reading else None)
+                
         environmental_risk=environmental_risk,
         system_recommendation=(
             latest_reading.system_recommendation

@@ -70,6 +70,28 @@ export async function getDecisionEvaluation(
   return response.data;
 }
 
+function normalizeOfflineEvaluation<T extends any>(evaluation: T): T {
+  if (!evaluation || evaluation.online !== false) {
+    return evaluation;
+  }
+
+  return {
+    ...evaluation,
+    power_source: "offline",
+    battery_percent: 0,
+    load_percent: 0,
+    estimated_runtime_minutes: 0,
+    fan_on: false,
+    cooling_reason: "System fully shut down; cooling fan is off.",
+    critical_server_a_on: false,
+    critical_server_b_on: false,
+    non_critical_server_a_on: false,
+    non_critical_server_b_on: false,
+    evaluation_summary:
+      "Device is offline after full shutdown. UPS battery is depleted, runtime is 0 minutes, and all simulated server loads are off.",
+  };
+}
+
 export async function createCommand(
   command: CommandCreateRequest
 ): Promise<CommandResponse> {
