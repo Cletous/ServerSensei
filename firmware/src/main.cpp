@@ -86,12 +86,6 @@ void setup()
   printRuntimeConfig();
 
   // Simulated UPS Runtime Engine
-  Serial.println("\n=== Simulated UPS Runtime Engine ===");
-  Serial.println("ESP32 remains powered by USB.");
-  Serial.println("Grid/Generator GPIO inputs decide power source.");
-  Serial.println("UPS battery percentage is simulated in firmware.");
-  Serial.println("Physical battery voltage monitoring is optional for this milestone.\n");
-
   Serial.println("==================================");
   Serial.println("ServerSensei");
   Serial.println("Grid + Generator + UPS Simulation");
@@ -124,6 +118,7 @@ void setup()
   Serial.println("/health");
   Serial.println("/sensor");
   Serial.println("/status");
+  Serial.println("/config");
 }
 
 void loop()
