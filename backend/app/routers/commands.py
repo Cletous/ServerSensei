@@ -22,6 +22,8 @@ MANUAL_ONLY_COMMANDS = [
     "fan_on",
     "fan_off",
     "set_fan",
+    "turn_fan_on",
+    "turn_fan_off",
     "server_on",
     "server_off",
     "set_relay",

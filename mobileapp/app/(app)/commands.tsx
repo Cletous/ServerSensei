@@ -20,6 +20,8 @@ const MANUAL_ONLY_ACTIONS = new Set([
   "fan_on",
   "fan_off",
   "set_fan",
+  "turn_fan_on",
+  "turn_fan_off",
   "server_on",
   "server_off",
   "set_relay",
@@ -218,7 +220,33 @@ export default function CommandsScreen() {
   }
 
   async function setFan(on: boolean) {
-    await sendCommand("set_fan", { on });
+    if (on) {
+      await sendCommand("turn_fan_on", {
+        source: "cooling_control_center",
+      });
+
+      return;
+    }
+
+    Alert.alert(
+      "Turn cooling fan OFF?",
+      "Only turn the cooling fan OFF if the room is safe or you are testing the relay. Automatic cooling protection will not control the fan while Manual Mode is active.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Turn Fan OFF",
+          style: "destructive",
+          onPress: async () => {
+            await sendCommand("turn_fan_off", {
+              source: "cooling_control_center",
+            });
+          },
+        },
+      ],
+    );
   }
 
   async function setBatteryPercent(batteryPercent: number) {
@@ -325,21 +353,36 @@ export default function CommandsScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Cooling Control</Text>
-        <Text style={styles.muted}>
-          Manual fan commands require Manual Mode. Automatic mode allows the
-          ESP32 to control cooling based on temperature and environmental risk.
-        </Text>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.cardTitle}>Cooling Control Center</Text>
+            <Text style={styles.muted}>
+              Control the cooling fan relay from the app. Manual Mode is
+              required. In Automatic Mode, the ESP32 manages cooling from
+              temperature and environmental risk.
+            </Text>
+          </View>
+
+          <View style={styles.iconBadge}>
+            <Ionicons
+              name="snow-outline"
+              size={22}
+              color={colors.primaryDark}
+            />
+          </View>
+        </View>
 
         <View style={styles.commandGrid}>
           <CommandButton
-            label="Fan ON"
+            label="Turn Cooling ON"
             disabled={sendingCommand}
             onPress={() => setFan(true)}
           />
+
           <CommandButton
-            label="Fan OFF"
+            label="Turn Cooling OFF"
             disabled={sendingCommand}
+            danger
             onPress={() => setFan(false)}
           />
         </View>

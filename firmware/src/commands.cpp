@@ -73,27 +73,26 @@ bool isValidLoadState(String stateValue)
         stateValue == "all_off");
 }
 
-bool commandRequiresManualMode(String actionValue)
+bool commandRequiresManualMode(String action)
 {
-    return (
-        actionValue == "set_load_state" ||
-        actionValue == "led_on" ||
-        actionValue == "led_off" ||
-        actionValue == "fan_on" ||
-        actionValue == "fan_off" ||
-        actionValue == "set_fan" ||
-        actionValue == "server_on" ||
-        actionValue == "server_off" ||
-        actionValue == "restart_server" ||
-        actionValue == "restart_all_servers" ||
-        actionValue == "power_all_servers" ||
-        actionValue == "shutdown_all_servers" ||
-        actionValue == "set_relay" ||
-        actionValue == "normal" ||
-        actionValue == "low_runtime" ||
-        actionValue == "critical_runtime" ||
-        actionValue == "safe" ||
-        actionValue == "all_off");
+    return action == "fan_on" ||
+           action == "fan_off" ||
+           action == "set_fan" ||
+           action == "turn_fan_on" ||
+           action == "turn_fan_off" ||
+           action == "server_on" ||
+           action == "server_off" ||
+           action == "set_relay" ||
+           action == "restart_server" ||
+           action == "restart_all_servers" ||
+           action == "power_all_servers" ||
+           action == "shutdown_all_servers" ||
+           action == "set_load_state" ||
+           action == "normal" ||
+           action == "low_runtime" ||
+           action == "critical_runtime" ||
+           action == "safe" ||
+           action == "all_off";
 }
 
 bool executeCommand(JsonObject command)
@@ -191,12 +190,12 @@ bool executeCommand(JsonObject command)
         return true;
     }
 
-    if (actionValue == "fan_on")
+    if (actionValue == "fan_on" || actionValue == "turn_fan_on")
     {
         return setFanRelayState(true);
     }
 
-    if (actionValue == "fan_off")
+    if (actionValue == "fan_off" || actionValue == "turn_fan_off")
     {
         return setFanRelayState(false);
     }
