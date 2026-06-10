@@ -78,7 +78,7 @@ export default function AdminScreen() {
     }
   }
 
-  if (loading) {
+  if (checkingAccess || loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.primary} />
