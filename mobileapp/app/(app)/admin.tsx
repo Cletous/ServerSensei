@@ -11,9 +11,11 @@ import {
   Text,
   View,
 } from "react-native";
-
 import {
+  approveCommand,
   getAdminUsers,
+  getCommandsAwaitingApproval,
+  rejectCommand,
   updateAdminUserRole,
   updateAdminUserStatus,
 } from "../../src/api/client";
@@ -22,7 +24,7 @@ import {
   getStoredUserRole,
 } from "../../src/storage/authStorage";
 import { colors } from "../../src/theme/colors";
-import type { UserItem, UserRole } from "../../src/types/api";
+import type { CommandResponse, UserItem, UserRole } from "../../src/types/api";
 
 const ROLES: UserRole[] = ["admin", "operator", "viewer"];
 
@@ -70,10 +72,13 @@ function formatDate(value: string | null) {
 
 export default function AdminScreen() {
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [approvals, setApprovals] = useState<CommandResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingApprovals, setLoadingApprovals] = useState(true);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
+  const [busyCommandId, setBusyCommandId] = useState<number | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const activeUsers = useMemo(
@@ -91,6 +96,13 @@ export default function AdminScreen() {
     [users],
   );
 
+  const pendingApprovals = useMemo(
+    () =>
+      approvals.filter((command) => command.status === "awaiting_approval")
+        .length,
+    [approvals],
+  );
+
   async function loadUsers(showError = true) {
     try {
       const data = await getAdminUsers();
@@ -105,6 +117,22 @@ export default function AdminScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function loadApprovals(showError = true) {
+    try {
+      const data = await getCommandsAwaitingApproval();
+      setApprovals(data);
+    } catch {
+      if (showError) {
+        Alert.alert(
+          "Approval inbox unavailable",
+          "Could not load pending command approvals.",
+        );
+      }
+    } finally {
+      setLoadingApprovals(false);
     }
   }
 
@@ -125,7 +153,9 @@ export default function AdminScreen() {
 
       setCurrentUserId(storedUser?.id ?? null);
       setCheckingAccess(false);
+
       await loadUsers();
+      await loadApprovals(false);
     }
 
     checkAccessAndLoadUsers();
@@ -134,6 +164,8 @@ export default function AdminScreen() {
   async function refreshUsers() {
     setRefreshing(true);
     await loadUsers(false);
+    await loadApprovals(false);
+    setRefreshing(false);
   }
 
   function confirmRoleChange(user: UserItem, role: UserRole) {
@@ -216,6 +248,75 @@ export default function AdminScreen() {
     }
   }
 
+  function confirmApproveCommand(command: CommandResponse) {
+    Alert.alert(
+      "Approve command",
+      `Approve ${command.action} for ${command.device_id}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Approve",
+          onPress: () => approveApprovalRequest(command.id),
+        },
+      ],
+    );
+  }
+
+  async function approveApprovalRequest(commandId: number) {
+    try {
+      setBusyCommandId(commandId);
+      await approveCommand(commandId);
+      await loadApprovals(false);
+
+      Alert.alert(
+        "Command approved",
+        "The command has been approved and queued for ESP32 execution.",
+      );
+    } catch {
+      Alert.alert("Approval failed", "Could not approve this command.");
+    } finally {
+      setBusyCommandId(null);
+    }
+  }
+
+  function confirmRejectCommand(command: CommandResponse) {
+    Alert.alert(
+      "Reject command",
+      `Reject ${command.action} for ${command.device_id}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Reject",
+          style: "destructive",
+          onPress: () => rejectApprovalRequest(command.id),
+        },
+      ],
+    );
+  }
+
+  async function rejectApprovalRequest(commandId: number) {
+    try {
+      setBusyCommandId(commandId);
+      await rejectCommand(commandId);
+      await loadApprovals(false);
+
+      Alert.alert(
+        "Command rejected",
+        "The command has been rejected and will not be executed.",
+      );
+    } catch {
+      Alert.alert("Rejection failed", "Could not reject this command.");
+    } finally {
+      setBusyCommandId(null);
+    }
+  }
+
   if (checkingAccess || loading) {
     return (
       <View style={styles.center}>
@@ -233,6 +334,129 @@ export default function AdminScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={refreshUsers} />
       }
     >
+      <View style={styles.approvalSection}>
+        <View style={styles.approvalHeader}>
+          <View>
+            <Text style={styles.approvalTitle}>Command Approval Inbox</Text>
+            <Text style={styles.approvalSubtitle}>
+              Review supervised commands before they reach the ESP32.
+            </Text>
+          </View>
+
+          <View style={styles.approvalCountBadge}>
+            <Text style={styles.approvalCountText}>{pendingApprovals}</Text>
+          </View>
+        </View>
+
+        {loadingApprovals ? (
+          <View style={styles.approvalLoadingCard}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.approvalLoadingText}>
+              Loading approval requests...
+            </Text>
+          </View>
+        ) : approvals.length === 0 ? (
+          <View style={styles.emptyApprovalCard}>
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={30}
+              color={colors.primary}
+            />
+            <Text style={styles.emptyApprovalTitle}>No pending approvals</Text>
+            <Text style={styles.emptyApprovalText}>
+              Non-admin command requests will appear here.
+            </Text>
+          </View>
+        ) : (
+          approvals.map((command) => {
+            const isBusy = busyCommandId === command.id;
+
+            return (
+              <View key={command.id} style={styles.approvalCard}>
+                <View style={styles.commandTopRow}>
+                  <View style={styles.commandIcon}>
+                    <Ionicons
+                      name="terminal-outline"
+                      size={20}
+                      color={colors.primary}
+                    />
+                  </View>
+
+                  <View style={styles.commandTitleWrap}>
+                    <Text style={styles.commandAction}>{command.action}</Text>
+                    <Text style={styles.commandMeta}>
+                      Device: {command.device_id}
+                    </Text>
+                  </View>
+
+                  <View style={styles.commandStatusBadge}>
+                    <Text style={styles.commandStatusText}>
+                      {command.status.replace("_", " ")}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.commandDetails}>
+                  <Text style={styles.commandDetailText}>
+                    Requested by user: #
+                    {command.created_by_user_id ?? "Unknown"}
+                  </Text>
+
+                  <Text style={styles.commandDetailText}>
+                    Requested: {formatDate(command.created_at)}
+                  </Text>
+
+                  <Text style={styles.payloadLabel}>Payload</Text>
+                  <Text style={styles.payloadText}>
+                    {command.payload
+                      ? JSON.stringify(command.payload, null, 2)
+                      : "No payload"}
+                  </Text>
+                </View>
+
+                <View style={styles.approvalActions}>
+                  <Pressable
+                    disabled={isBusy}
+                    style={[
+                      styles.rejectButton,
+                      isBusy && styles.disabledActionButton,
+                    ]}
+                    onPress={() => confirmRejectCommand(command)}
+                  >
+                    <Ionicons
+                      name="close-circle-outline"
+                      size={18}
+                      color={colors.critical}
+                    />
+                    <Text style={styles.rejectButtonText}>
+                      {isBusy ? "Working..." : "Reject"}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={isBusy}
+                    style={[
+                      styles.approveButton,
+                      isBusy && styles.disabledActionButton,
+                    ]}
+                    onPress={() => confirmApproveCommand(command)}
+                  >
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={18}
+                      color={colors.white}
+                    />
+                    <Text style={styles.approveButtonText}>
+                      {isBusy ? "Working..." : "Approve"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
           <View style={styles.heroIcon}>
@@ -750,5 +974,185 @@ const styles = StyleSheet.create({
   },
   disabledControl: {
     opacity: 0.55,
+  },
+  approvalSection: {
+    marginTop: 18,
+    marginBottom: 18,
+  },
+  approvalHeader: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+  approvalTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  approvalSubtitle: {
+    marginTop: 4,
+    color: colors.mutedText,
+    fontWeight: "700",
+    lineHeight: 19,
+  },
+  approvalCountBadge: {
+    minWidth: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  approvalCountText: {
+    color: colors.primaryDark,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  approvalLoadingCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 18,
+    alignItems: "center",
+    gap: 10,
+  },
+  approvalLoadingText: {
+    color: colors.mutedText,
+    fontWeight: "800",
+  },
+  emptyApprovalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyApprovalTitle: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: "900",
+    color: colors.text,
+  },
+  emptyApprovalText: {
+    marginTop: 4,
+    color: colors.mutedText,
+    textAlign: "center",
+    fontWeight: "700",
+  },
+  approvalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 12,
+  },
+  commandTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  commandIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commandTitleWrap: {
+    flex: 1,
+  },
+  commandAction: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  commandMeta: {
+    marginTop: 3,
+    color: colors.mutedText,
+    fontWeight: "700",
+  },
+  commandStatusBadge: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  commandStatusText: {
+    color: "#92400E",
+    fontWeight: "900",
+    fontSize: 11,
+    textTransform: "capitalize",
+  },
+  commandDetails: {
+    marginTop: 14,
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 12,
+  },
+  commandDetailText: {
+    color: colors.mutedText,
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+  payloadLabel: {
+    marginTop: 8,
+    marginBottom: 4,
+    color: colors.text,
+    fontWeight: "900",
+  },
+  payloadText: {
+    color: colors.text,
+    fontFamily: "monospace",
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  approvalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  rejectButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  rejectButtonText: {
+    color: colors.critical,
+    fontWeight: "900",
+  },
+  approveButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  approveButtonText: {
+    color: colors.white,
+    fontWeight: "900",
+  },
+  disabledActionButton: {
+    opacity: 0.6,
   },
 });
