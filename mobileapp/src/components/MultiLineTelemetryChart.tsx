@@ -1,20 +1,15 @@
-import { View, Text, StyleSheet } from "react-native";
-import Svg, {
-  Circle,
-  Line,
-  Path,
-  Rect,
-  Text as SvgText,
-} from "react-native-svg";
+import { useMemo, useState } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, Line, Path, Rect } from "react-native-svg";
 
 import { colors } from "../theme/colors";
 import type { TelemetryHistoryPoint } from "../types/api";
+import { formatDateTime } from "../utils/dateTime";
 
 type MetricKey =
   | "temperature"
   | "humidity"
   | "air_quality_raw"
-  | "battery_percent"
   | "load_percent";
 
 type MetricConfig = {
@@ -22,19 +17,19 @@ type MetricConfig = {
   label: string;
   shortLabel: string;
   color: string;
-  max: number;
   unit: string;
+  decimals: number;
 };
 
-type NormalizedPoint = {
+type PlotPoint = {
   x: number;
   y: number;
-  rawValue: number;
+  value: number;
+  sourceIndex: number;
 };
 
 type Series = MetricConfig & {
-  points: NormalizedPoint[];
-  latestValue: number | null;
+  points: PlotPoint[];
 };
 
 type MultiLineTelemetryChartProps = {
@@ -42,14 +37,15 @@ type MultiLineTelemetryChartProps = {
 };
 
 const CHART_WIDTH = 340;
-const CHART_HEIGHT = 220;
-const CHART_PADDING_LEFT = 38;
-const CHART_PADDING_RIGHT = 14;
-const CHART_PADDING_TOP = 18;
-const CHART_PADDING_BOTTOM = 34;
+const CHART_HEIGHT = 250;
 
-const PLOT_WIDTH = CHART_WIDTH - CHART_PADDING_LEFT - CHART_PADDING_RIGHT;
-const PLOT_HEIGHT = CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
+const PADDING_LEFT = 18;
+const PADDING_RIGHT = 18;
+const PADDING_TOP = 22;
+const PADDING_BOTTOM = 34;
+
+const PLOT_WIDTH = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
+const PLOT_HEIGHT = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
 
 const METRICS: MetricConfig[] = [
   {
@@ -57,54 +53,65 @@ const METRICS: MetricConfig[] = [
     label: "Temperature",
     shortLabel: "Temp",
     color: colors.critical,
-    max: 50,
     unit: "°C",
+    decimals: 1,
   },
   {
     key: "humidity",
     label: "Humidity",
-    shortLabel: "Hum",
+    shortLabel: "Humidity",
     color: colors.info,
-    max: 100,
     unit: "%",
+    decimals: 1,
   },
   {
     key: "air_quality_raw",
     label: "Air Quality",
     shortLabel: "Air",
     color: colors.warning,
-    max: 2000,
-    unit: "",
-  },
-  {
-    key: "battery_percent",
-    label: "Battery",
-    shortLabel: "Batt",
-    color: colors.success,
-    max: 100,
-    unit: "%",
+    unit: "raw",
+    decimals: 0,
   },
   {
     key: "load_percent",
     label: "Load",
     shortLabel: "Load",
     color: colors.secondary,
-    max: 100,
     unit: "%",
+    decimals: 0,
   },
 ];
 
 export function MultiLineTelemetryChart({
   data,
 }: MultiLineTelemetryChartProps) {
-  const cleanData = data.filter((point) => point.created_at);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const series = METRICS.map((metric) => buildSeries(metric, cleanData)).filter(
-    (item) => item.points.length >= 2,
+  const cleanData = useMemo(
+    () =>
+      data
+        .filter((point) => point.created_at)
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        ),
+    [data],
   );
 
-  const latestPoint =
-    cleanData.length > 0 ? cleanData[cleanData.length - 1] : null;
+  const series = useMemo(
+    () =>
+      METRICS.map((metric) => buildSeries(metric, cleanData)).filter(
+        (item) => item.points.length >= 2,
+      ),
+    [cleanData],
+  );
+
+  const activeIndex =
+    selectedIndex ?? (cleanData.length > 0 ? cleanData.length - 1 : null);
+
+  const activePoint =
+    activeIndex == null ? null : (cleanData[activeIndex] ?? null);
 
   if (cleanData.length < 2 || series.length === 0) {
     return (
@@ -112,7 +119,7 @@ export function MultiLineTelemetryChart({
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>Telemetry Trends</Text>
-            <Text style={styles.title}>Combined Live Graph</Text>
+            <Text style={styles.title}>Live Inspection Graph</Text>
           </View>
         </View>
 
@@ -127,74 +134,115 @@ export function MultiLineTelemetryChart({
     );
   }
 
+  function inspectAtX(locationX: number) {
+    const clampedX = Math.max(
+      PADDING_LEFT,
+      Math.min(CHART_WIDTH - PADDING_RIGHT, locationX),
+    );
+    const ratio = (clampedX - PADDING_LEFT) / PLOT_WIDTH;
+    const index = Math.round(ratio * (cleanData.length - 1));
+    const safeIndex = Math.max(0, Math.min(cleanData.length - 1, index));
+
+    setSelectedIndex(safeIndex);
+  }
+
+  const webHoverHandlers =
+    Platform.OS === "web"
+      ? ({
+          onMouseMove: (event: any) => {
+            const offsetX =
+              event?.nativeEvent?.offsetX ?? event?.nativeEvent?.locationX ?? 0;
+
+            inspectAtX(offsetX);
+          },
+          onMouseLeave: () => {
+            setSelectedIndex(null);
+          },
+        } as any)
+      : {};
+
+  const activeX =
+    activeIndex == null
+      ? PADDING_LEFT
+      : PADDING_LEFT + (activeIndex / (cleanData.length - 1)) * PLOT_WIDTH;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <View>
           <Text style={styles.eyebrow}>Telemetry Trends</Text>
-          <Text style={styles.title}>Combined Live Graph</Text>
+          <Text style={styles.title}>Live Inspection Graph</Text>
           <Text style={styles.subtitle}>
-            All metrics are normalized to 0–100% so they can be compared in one
-            graph.
+            Hover or drag across the chart to inspect each telemetry sample.
           </Text>
         </View>
 
         <View style={styles.badge}>
-          <Text style={styles.badgeValue}>{cleanData.length}</Text>
-          <Text style={styles.badgeLabel}>points</Text>
+          <Text style={styles.badgeValue}>10s</Text>
+          <Text style={styles.badgeLabel}>interval</Text>
         </View>
       </View>
 
-      <View style={styles.chartFrame}>
+      <View
+        style={styles.chartFrame}
+        {...webHoverHandlers}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(event) => {
+          inspectAtX(event.nativeEvent.locationX);
+        }}
+        onResponderMove={(event) => {
+          inspectAtX(event.nativeEvent.locationX);
+        }}
+      >
         <Svg
           width="100%"
           height={CHART_HEIGHT}
           viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         >
           <Rect
-            x={CHART_PADDING_LEFT}
-            y={CHART_PADDING_TOP}
+            x={PADDING_LEFT}
+            y={PADDING_TOP}
             width={PLOT_WIDTH}
             height={PLOT_HEIGHT}
-            rx={14}
+            rx={18}
             fill="#F8FAFC"
             stroke={colors.border}
             strokeWidth={1}
           />
 
-          {[0, 25, 50, 75, 100].map((tick) => {
-            const y =
-              CHART_PADDING_TOP + PLOT_HEIGHT - (tick / 100) * PLOT_HEIGHT;
+          {[0.25, 0.5, 0.75].map((ratio) => {
+            const y = PADDING_TOP + PLOT_HEIGHT * ratio;
 
             return (
               <Line
-                key={`grid-${tick}`}
-                x1={CHART_PADDING_LEFT}
-                x2={CHART_WIDTH - CHART_PADDING_RIGHT}
+                key={`grid-${ratio}`}
+                x1={PADDING_LEFT}
+                x2={CHART_WIDTH - PADDING_RIGHT}
                 y1={y}
                 y2={y}
                 stroke={colors.border}
                 strokeWidth={1}
+                strokeDasharray="5 6"
               />
             );
           })}
 
-          {[0, 50, 100].map((tick) => {
-            const y =
-              CHART_PADDING_TOP + PLOT_HEIGHT - (tick / 100) * PLOT_HEIGHT;
+          {buildTimeTickIndexes(cleanData.length).map((index) => {
+            const x =
+              PADDING_LEFT + (index / (cleanData.length - 1)) * PLOT_WIDTH;
 
             return (
-              <SvgText
-                key={`label-${tick}`}
-                x={CHART_PADDING_LEFT - 9}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="10"
-                fontWeight="700"
-                fill={colors.mutedText}
-              >
-                {tick}
-              </SvgText>
+              <Line
+                key={`tick-${index}`}
+                x1={x}
+                x2={x}
+                y1={PADDING_TOP}
+                y2={CHART_HEIGHT - PADDING_BOTTOM}
+                stroke={colors.border}
+                strokeWidth={1}
+                strokeDasharray="4 8"
+              />
             );
           })}
 
@@ -210,81 +258,128 @@ export function MultiLineTelemetryChart({
             />
           ))}
 
+          <Line
+            x1={activeX}
+            x2={activeX}
+            y1={PADDING_TOP}
+            y2={CHART_HEIGHT - PADDING_BOTTOM}
+            stroke={colors.secondary}
+            strokeWidth={1.5}
+            strokeDasharray="5 5"
+          />
+
           {series.map((item) => {
-            const lastPoint = item.points[item.points.length - 1];
+            const activeSeriesPoint = item.points.find(
+              (point) => point.sourceIndex === activeIndex,
+            );
+
+            if (!activeSeriesPoint) {
+              return null;
+            }
 
             return (
               <Circle
-                key={`${item.key}-latest`}
-                cx={lastPoint.x}
-                cy={lastPoint.y}
-                r={4}
+                key={`${item.key}-active`}
+                cx={activeSeriesPoint.x}
+                cy={activeSeriesPoint.y}
+                r={4.5}
                 fill={item.color}
                 stroke={colors.white}
                 strokeWidth={2}
               />
             );
           })}
-
-          <SvgText
-            x={CHART_PADDING_LEFT}
-            y={CHART_HEIGHT - 8}
-            fontSize="10"
-            fontWeight="700"
-            fill={colors.mutedText}
-          >
-            oldest
-          </SvgText>
-
-          <SvgText
-            x={CHART_WIDTH - CHART_PADDING_RIGHT}
-            y={CHART_HEIGHT - 8}
-            textAnchor="end"
-            fontSize="10"
-            fontWeight="700"
-            fill={colors.mutedText}
-          >
-            latest
-          </SvgText>
         </Svg>
+
+        {activePoint ? (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.tooltip,
+              activeX > CHART_WIDTH * 0.58
+                ? styles.tooltipLeft
+                : styles.tooltipRight,
+            ]}
+          >
+            <Text style={styles.tooltipTitle}>
+              {formatDateTime(activePoint.created_at)}
+            </Text>
+
+            <TooltipValue
+              color={colors.critical}
+              label="Temperature"
+              value={formatMetricValue(activePoint.temperature, "°C", 1)}
+            />
+
+            <TooltipValue
+              color={colors.info}
+              label="Humidity"
+              value={formatMetricValue(activePoint.humidity, "%", 1)}
+            />
+
+            <TooltipValue
+              color={colors.warning}
+              label="Air quality"
+              value={formatMetricValue(activePoint.air_quality_raw, "raw", 0)}
+            />
+
+            <TooltipValue
+              color={colors.secondary}
+              label="Load"
+              value={formatMetricValue(activePoint.load_percent, "%", 0)}
+            />
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.legend}>
-        {series.map((item) => (
-          <View key={item.key} style={styles.legendItem}>
+        {METRICS.map((metric) => (
+          <View key={metric.key} style={styles.legendItem}>
             <View
               style={[
                 styles.legendDot,
                 {
-                  backgroundColor: item.color,
+                  backgroundColor: metric.color,
                 },
               ]}
             />
-            <Text style={styles.legendText}>{item.shortLabel}</Text>
+            <Text style={styles.legendText}>{metric.shortLabel}</Text>
           </View>
         ))}
       </View>
 
-      <View style={styles.latestGrid}>
-        {METRICS.map((metric) => {
-          const value = latestPoint?.[metric.key];
-
-          return (
-            <View key={metric.key} style={styles.latestCard}>
-              <Text style={styles.latestLabel}>{metric.shortLabel}</Text>
-              <Text style={styles.latestValue}>
-                {typeof value === "number"
-                  ? formatValue(value, metric.unit)
-                  : "N/A"}
-              </Text>
-              <Text style={styles.latestMeta}>
-                normalized against {metric.max}
-                {metric.unit}
-              </Text>
-            </View>
-          );
-        })}
+      <View style={styles.noteCard}>
+        <Text style={styles.noteTitle}>Graph behaviour</Text>
+        <Text style={styles.noteText}>
+          The Y-axis is intentionally unlabeled because each line keeps its real
+          unit. Use hover or touch inspection to read the exact values.
+        </Text>
       </View>
+    </View>
+  );
+}
+
+function TooltipValue({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.tooltipRow}>
+      <View
+        style={[
+          styles.tooltipDot,
+          {
+            backgroundColor: color,
+          },
+        ]}
+      />
+      <Text style={styles.tooltipLabel}>{label}</Text>
+      <Text style={styles.tooltipValue}>{value}</Text>
     </View>
   );
 }
@@ -293,6 +388,15 @@ function buildSeries(
   metric: MetricConfig,
   data: TelemetryHistoryPoint[],
 ): Series {
+  const values = data
+    .map((point) => point[metric.key])
+    .filter((value): value is number => {
+      return typeof value === "number" && Number.isFinite(value);
+    });
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
   const points = data
     .map((point, index) => {
       const value = point[metric.key];
@@ -303,41 +407,37 @@ function buildSeries(
 
       const x =
         data.length <= 1
-          ? CHART_PADDING_LEFT
-          : CHART_PADDING_LEFT + (index / (data.length - 1)) * PLOT_WIDTH;
+          ? PADDING_LEFT
+          : PADDING_LEFT + (index / (data.length - 1)) * PLOT_WIDTH;
 
-      const normalized = normalizeValue(value, metric.max);
+      const normalized = normalizeWithinMetric(value, min, max);
 
-      const y =
-        CHART_PADDING_TOP + PLOT_HEIGHT - (normalized / 100) * PLOT_HEIGHT;
+      const y = PADDING_TOP + PLOT_HEIGHT - normalized * PLOT_HEIGHT;
 
       return {
         x,
         y,
-        rawValue: value,
+        value,
+        sourceIndex: index,
       };
     })
-    .filter((point): point is NormalizedPoint => point !== null);
-
-  const latestValue =
-    points.length > 0 ? points[points.length - 1].rawValue : null;
+    .filter((point): point is PlotPoint => point !== null);
 
   return {
     ...metric,
     points,
-    latestValue,
   };
 }
 
-function normalizeValue(value: number, max: number) {
-  if (max <= 0) {
-    return 0;
+function normalizeWithinMetric(value: number, min: number, max: number) {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
+    return 0.5;
   }
 
-  return Math.max(0, Math.min(100, (value / max) * 100));
+  return Math.max(0, Math.min(1, (value - min) / (max - min)));
 }
 
-function buildPath(points: NormalizedPoint[]) {
+function buildPath(points: PlotPoint[]) {
   if (points.length === 0) {
     return "";
   }
@@ -350,12 +450,31 @@ function buildPath(points: NormalizedPoint[]) {
     .join(" ");
 }
 
-function formatValue(value: number, unit: string) {
-  if (unit === "") {
-    return value.toFixed(0);
+function buildTimeTickIndexes(length: number) {
+  if (length <= 2) {
+    return [0, length - 1];
   }
 
-  return `${value.toFixed(1)}${unit}`;
+  const middle = Math.floor((length - 1) / 2);
+  return [0, middle, length - 1];
+}
+
+function formatMetricValue(
+  value: number | null | undefined,
+  unit: string,
+  decimals: number,
+) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "N/A";
+  }
+
+  const formatted = value.toFixed(decimals);
+
+  if (unit === "raw") {
+    return `${formatted} raw`;
+  }
+
+  return `${formatted}${unit}`;
 }
 
 const styles = StyleSheet.create({
@@ -400,7 +519,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 18,
     marginTop: 5,
-    maxWidth: 235,
+    maxWidth: 230,
   },
 
   badge: {
@@ -428,8 +547,68 @@ const styles = StyleSheet.create({
   },
 
   chartFrame: {
+    position: "relative",
     overflow: "hidden",
     borderRadius: 18,
+    backgroundColor: colors.background,
+  },
+
+  tooltip: {
+    position: "absolute",
+    top: 18,
+    width: 190,
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 12,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+
+  tooltipLeft: {
+    left: 20,
+  },
+
+  tooltipRight: {
+    right: 20,
+  },
+
+  tooltipTitle: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
+    lineHeight: 17,
+    marginBottom: 8,
+  },
+
+  tooltipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 6,
+  },
+
+  tooltipDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+  },
+
+  tooltipLabel: {
+    flex: 1,
+    color: colors.mutedText,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  tooltipValue: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
   },
 
   legend: {
@@ -463,43 +642,27 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  latestGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 14,
-  },
-
-  latestCard: {
-    flexGrow: 1,
-    minWidth: "30%",
+  noteCard: {
     backgroundColor: colors.background,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 18,
     padding: 12,
+    marginTop: 14,
   },
 
-  latestLabel: {
-    color: colors.mutedText,
-    fontSize: 11,
-    fontWeight: "900",
-    textTransform: "uppercase",
-  },
-
-  latestValue: {
+  noteTitle: {
     color: colors.text,
-    fontSize: 17,
+    fontSize: 13,
     fontWeight: "900",
-    marginTop: 5,
   },
 
-  latestMeta: {
+  noteText: {
     color: colors.mutedText,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
-    lineHeight: 14,
-    marginTop: 4,
+    lineHeight: 18,
+    marginTop: 5,
   },
 
   emptyBox: {

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getTelemetryHistory } from "../../src/api/client";
-import { MultiLineTelemetryChart } from "../../src/components/MultiLineTelemetryChart";
+import { TelemetryMetricChartCard } from "../../src/components/TelemetryMetricChartCard";
 import { colors } from "../../src/theme/colors";
 import type { TelemetryHistoryPoint } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
@@ -30,7 +30,15 @@ export default function TrendsScreen() {
   async function loadTrends() {
     try {
       const data = await getTelemetryHistory(DEFAULT_DEVICE_ID, HISTORY_LIMIT);
-      setHistory(data);
+
+      const sortedData = data
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+
+      setHistory(sortedData);
     } catch (error) {
       Alert.alert(
         "Trends error",
@@ -54,6 +62,19 @@ export default function TrendsScreen() {
     return () => clearInterval(intervalId);
   }, []);
 
+  const latestPoint = history.length > 0 ? history[history.length - 1] : null;
+  const oldestPoint = history.length > 0 ? history[0] : null;
+
+  const chartData = useMemo(() => {
+    return {
+      temperature: history.map((point) => point.temperature),
+      humidity: history.map((point) => point.humidity),
+      airQuality: history.map((point) => point.air_quality_raw),
+      battery: history.map((point) => point.battery_percent),
+      load: history.map((point) => point.load_percent),
+    };
+  }, [history]);
+
   if (loading) {
     return (
       <View
@@ -70,9 +91,6 @@ export default function TrendsScreen() {
       </View>
     );
   }
-
-  const latestPoint = history.length > 0 ? history[history.length - 1] : null;
-  const oldestPoint = history.length > 0 ? history[0] : null;
 
   return (
     <ScrollView
@@ -92,8 +110,8 @@ export default function TrendsScreen() {
         <Text style={styles.eyebrow}>Analytics</Text>
         <Text style={styles.title}>Telemetry Trends</Text>
         <Text style={styles.subtitle}>
-          A single normalized multi-line graph for temperature, humidity, air
-          quality, battery level, and active load.
+          Separate graphs for each metric make the readings easier to understand
+          and better for presentation screenshots.
         </Text>
       </View>
 
@@ -115,38 +133,74 @@ export default function TrendsScreen() {
         />
       </View>
 
-      <MultiLineTelemetryChart data={history} />
-
-      <View style={styles.explanationCard}>
-        <View style={styles.explanationHeader}>
-          <View style={styles.explanationIcon}>
-            <Ionicons
-              name="information-circle-outline"
-              size={22}
-              color={colors.primaryDark}
-            />
-          </View>
-
-          <Text style={styles.explanationTitle}>How to read this graph</Text>
+      <View style={styles.rangeCard}>
+        <View style={styles.rangeIcon}>
+          <Ionicons name="pulse-outline" size={22} color={colors.primaryDark} />
         </View>
 
-        <Text style={styles.explanationText}>
-          Temperature is normalized against 50°C, humidity against 100%, air
-          quality against 2000 raw MQ135 units, battery against 100%, and load
-          against 100%. This makes different units comparable in one graph.
-        </Text>
-
-        <Text style={styles.rangeText}>
-          Range:{" "}
-          {oldestPoint?.created_at
-            ? formatDateTime(oldestPoint.created_at)
-            : "N/A"}{" "}
-          to{" "}
-          {latestPoint?.created_at
-            ? formatDateTime(latestPoint.created_at)
-            : "N/A"}
-        </Text>
+        <View style={styles.rangeTextBlock}>
+          <Text style={styles.rangeTitle}>Trend window</Text>
+          <Text style={styles.rangeText}>
+            {oldestPoint?.created_at
+              ? formatDateTime(oldestPoint.created_at)
+              : "N/A"}{" "}
+            to{" "}
+            {latestPoint?.created_at
+              ? formatDateTime(latestPoint.created_at)
+              : "N/A"}
+          </Text>
+        </View>
       </View>
+
+      <TelemetryMetricChartCard
+        title="Temperature"
+        subtitle="Server room thermal trend"
+        icon="thermometer-outline"
+        unit="°C"
+        tone="critical"
+        decimals={1}
+        data={chartData.temperature}
+      />
+
+      <TelemetryMetricChartCard
+        title="Humidity"
+        subtitle="Relative humidity trend"
+        icon="water-outline"
+        unit="%"
+        tone="info"
+        decimals={1}
+        data={chartData.humidity}
+      />
+
+      <TelemetryMetricChartCard
+        title="Air Quality"
+        subtitle="MQ135 raw sensor readings"
+        icon="cloud-outline"
+        unit="raw"
+        tone="warning"
+        decimals={0}
+        data={chartData.airQuality}
+      />
+
+      <TelemetryMetricChartCard
+        title="Battery"
+        subtitle="UPS battery simulation level"
+        icon="battery-half-outline"
+        unit="%"
+        tone="success"
+        decimals={0}
+        data={chartData.battery}
+      />
+
+      <TelemetryMetricChartCard
+        title="Load"
+        subtitle="Active server load percentage"
+        icon="speedometer-outline"
+        unit="%"
+        tone="dark"
+        decimals={0}
+        data={chartData.load}
+      />
     </ScrollView>
   );
 }
@@ -262,13 +316,52 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
+  rangeCard: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 14,
+    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  rangeIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  rangeTextBlock: {
+    flex: 1,
+  },
+
+  rangeTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  rangeText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginTop: 4,
+  },
+
   explanationCard: {
     backgroundColor: colors.card,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 24,
     padding: 16,
-    marginTop: 14,
+    marginTop: 2,
   },
 
   explanationHeader: {
@@ -297,14 +390,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 20,
-    marginTop: 12,
-  },
-
-  rangeText: {
-    color: colors.secondary,
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 18,
     marginTop: 12,
   },
 });
