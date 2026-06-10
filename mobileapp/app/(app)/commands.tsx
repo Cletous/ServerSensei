@@ -6,13 +6,31 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
 import { createCommand } from "../../src/api/client";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
+
+const MANUAL_ONLY_COMMANDS = [
+  "fan_on",
+  "fan_off",
+  "set_fan",
+  "server_on",
+  "server_off",
+  "set_relay",
+  "set_load_state",
+  "normal",
+  "low_runtime",
+  "critical_runtime",
+  "safe",
+  "all_off",
+];
 
 export default function CommandsScreen() {
   const insets = useSafeAreaInsets();
@@ -20,33 +38,46 @@ export default function CommandsScreen() {
 
   async function sendCommand(
     action: string,
-    payload?: Record<string, unknown>,
+    payload: Record<string, unknown> = {},
   ) {
     try {
       setSendingCommand(true);
 
-      const command = await createCommand({
+      const response = await createCommand({
         device_id: DEFAULT_DEVICE_ID,
         action,
         payload,
       });
 
-      if (command.status === "awaiting_approval") {
+      if (response.status === "awaiting_approval") {
         Alert.alert(
-          "Approval requested",
-          "Your command has been submitted for admin approval. Serversensei will not execute it until an admin approves it.",
+          "Approval Requested",
+          "This command has been sent to the admin approval inbox.",
         );
+      } else {
+        Alert.alert(
+          "Command Queued",
+          "The command has been queued for the ESP32.",
+        );
+      }
+    } catch (error: any) {
+      const backendMessage = error?.response?.data?.detail;
+
+      if (
+        typeof backendMessage === "string" &&
+        backendMessage.includes("requires manual mode")
+      ) {
+        Alert.alert(
+          "Manual Mode Required",
+          "This command directly controls hardware. Switch the device to Manual Mode before using fan, relay, server, or load controls.",
+        );
+
         return;
       }
 
       Alert.alert(
-        "Command queued",
-        "The command has been sent to the backend. Serversensei will execute it on its next command poll.",
-      );
-    } catch (error) {
-      Alert.alert(
         "Command failed",
-        "Could not send command. Check your login, backend, user role, and device registration.",
+        backendMessage || "Could not send command.",
       );
     } finally {
       setSendingCommand(false);
@@ -83,6 +114,46 @@ export default function CommandsScreen() {
         <Text style={styles.subtitle}>
           Queue commands for the ESP32 through the backend.
         </Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.primaryCommandButton}
+        onPress={() => sendCommand("set_mode", { mode: "manual" })}
+      >
+        <Ionicons name="construct-outline" size={20} color={colors.white} />
+        <Text style={styles.primaryCommandButtonText}>
+          Switch to Manual Mode
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryCommandButton}
+        onPress={() => sendCommand("set_mode", { mode: "monitor" })}
+      >
+        <Ionicons name="sync-outline" size={20} color={colors.primary} />
+        <Text style={styles.secondaryCommandButtonText}>
+          Return to Automatic Mode
+        </Text>
+      </TouchableOpacity>
+
+      <View style={styles.manualModeNotice}>
+        <View style={styles.manualModeIconWrap}>
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={22}
+            color={colors.primary}
+          />
+        </View>
+
+        <View style={styles.manualModeNoticeTextWrap}>
+          <Text style={styles.manualModeNoticeTitle}>
+            Manual Mode Protection
+          </Text>
+          <Text style={styles.manualModeNoticeText}>
+            Direct fan, relay, server, and load controls require Manual Mode.
+            Automatic mode keeps the ESP32 in charge of safety decisions.
+          </Text>
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -270,5 +341,69 @@ const styles = StyleSheet.create({
   sendingText: {
     color: "#374151",
     fontWeight: "700",
+  },
+  manualModeNotice: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: "row",
+    gap: 12,
+  },
+  manualModeIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  manualModeNoticeTextWrap: {
+    flex: 1,
+  },
+  manualModeNoticeTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  manualModeNoticeText: {
+    marginTop: 4,
+    color: colors.mutedText,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  primaryCommandButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  primaryCommandButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  secondaryCommandButton: {
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  secondaryCommandButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: "900",
   },
 });
