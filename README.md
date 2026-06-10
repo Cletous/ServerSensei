@@ -435,13 +435,26 @@ If migrations are not available, the backend also creates SQLAlchemy tables at s
 ### 7. Start backend
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+cd backend
+./start_backend.sh
+```
+
+Connect laptop to hotspot and then Get your laptop ip address using:
+
+```bash
+ipconfig
 ```
 
 Expected backend URL on your laptop:
 
 ```text
 http://YOUR_LAPTOP_IP:8000
+```
+
+For example:
+
+```text
+http://10.128.44.124:8000
 ```
 
 For local browser testing:
@@ -603,7 +616,14 @@ Open in browser:
 http://ESP32_IP/config
 ```
 
-Use this page to set:
+To get the ESP32_IP connect it to WIFI and look for the following in the monitoring terminal
+
+````text
+Wi-Fi connected successfully
+ESP32 IP Address: 10.128.44.99
+```text
+
+Use this page (http://ESP32_IP/config) to set:
 
 - Wi-Fi SSID
 - Wi-Fi password
@@ -613,7 +633,7 @@ Example backend URL:
 
 ```text
 http://10.0.1.23:8000
-```
+````
 
 After saving Wi-Fi or backend URL settings, restart the ESP32.
 
