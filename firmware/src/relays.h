@@ -1,5 +1,7 @@
 #pragma once
 
+bool setFanRelayState(bool fanOn);
+
 void setupRelays();
 void applyRelayStates();
 void setRelayOutputs(

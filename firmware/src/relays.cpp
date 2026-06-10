@@ -113,6 +113,25 @@ void setupRelays()
     Serial.println("[Relays] Relay outputs initialized");
 }
 
+bool setFanRelayState(bool fanOn)
+{
+    if (fanOn && (loadState == "all_off" || simulatedPowerDepleted))
+    {
+        Serial.println("[Fan] fan cannot turn ON as power is depleted");
+        return false;
+    }
+
+    fanRelayState = fanOn;
+    applyRelayStates();
+
+    if (fanRelayState)
+        Serial.println("[Fan] Manual fan command: ON");
+    else
+        Serial.println("[Fan] Manual fan command: OFF");
+
+    return true;
+}
+
 void controlFan(float temperature)
 {
     if (isnan(temperature))

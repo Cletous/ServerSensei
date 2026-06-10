@@ -6,6 +6,7 @@
 #include "config.h"
 #include "state.h"
 #include "loads.h"
+#include "relays.h"
 #include "commands.h"
 #include "runtime_config.h"
 
@@ -184,6 +185,37 @@ bool executeCommand(JsonObject command)
         Serial.println(loadState);
 
         return true;
+    }
+
+    if (actionValue == "fan_on")
+    {
+        return setFanRelayState(true);
+    }
+
+    if (actionValue == "fan_off")
+    {
+        return setFanRelayState(false);
+    }
+
+    if (actionValue == "set_fan")
+    {
+        JsonObject payload = command["payload"];
+
+        if (payload.isNull())
+        {
+            Serial.println("[Commands] Missing payload for set_fan");
+            return false;
+        }
+
+        if (payload["on"].isNull())
+        {
+            Serial.println("[Commands] Missing on value for set_fan");
+            return false;
+        }
+
+        bool fanOn = payload["on"];
+
+        return setFanRelayState(fanOn);
     }
 
     if (actionValue == "set_battery_percent")

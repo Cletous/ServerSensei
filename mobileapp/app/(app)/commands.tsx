@@ -92,6 +92,10 @@ export default function CommandsScreen() {
     await sendCommand("set_load_state", { state });
   }
 
+  async function setFan(on: boolean) {
+    await sendCommand("set_fan", { on });
+  }
+
   async function setBatteryPercent(batteryPercent: number) {
     await sendCommand("set_battery_percent", {
       battery_percent: batteryPercent,
@@ -187,10 +191,31 @@ export default function CommandsScreen() {
       </View>
 
       <View style={styles.card}>
+        <Text style={styles.cardTitle}>Cooling Control</Text>
+        <Text style={styles.muted}>
+          Manual fan commands require Manual Mode. Automatic mode allows the
+          ESP32 to control cooling based on temperature and environmental risk.
+        </Text>
+
+        <View style={styles.commandGrid}>
+          <CommandButton
+            label="Fan ON"
+            disabled={sendingCommand}
+            onPress={() => setFan(true)}
+          />
+          <CommandButton
+            label="Fan OFF"
+            disabled={sendingCommand}
+            onPress={() => setFan(false)}
+          />
+        </View>
+      </View>
+
+      <View style={styles.card}>
         <Text style={styles.cardTitle}>Load State</Text>
         <Text style={styles.muted}>
-          Load commands are rejected by firmware when the device is in monitor
-          mode.
+          Load commands require Manual Mode and are rejected when the ESP32 is
+          not in manual control.
         </Text>
 
         <View style={styles.commandGrid}>
