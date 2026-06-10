@@ -64,16 +64,15 @@ The prototype uses simulated server loads through relays or LEDs:
 
 ```text
 Sensors / Switches / Relays
+          ^
           |
           v
        ESP32
+          ^
           |
           | Wi-Fi / HTTP
           v
-   FastAPI Backend
-          |
-          v
-      MySQL Database
+   FastAPI Backend <--> MySQL Database
           |
           v
  React Native / Expo Mobile App
