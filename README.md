@@ -2,7 +2,7 @@
 
 **Intelligent Server Room Environmental Monitoring and Power-Aware Load Management System**
 
-ServerSensei is a final-year engineering/research prototype that combines an ESP32 embedded system, a FastAPI backend, a MySQL database, and a React Native/Expo mobile application to monitor server-room environmental and power conditions in real time.
+ServerSensei is an engineering/research prototype that combines an ESP32 embedded system, a FastAPI backend, a MySQL database, and a React Native/Expo mobile application to monitor server-room environmental and power conditions in real time.
 
 The system monitors temperature, humidity, air quality, power source, simulated UPS battery percentage, load percentage, fan state, and critical/non-critical server-load states. It also predicts UPS runtime and automatically sheds non-critical loads before critical loads during power interruptions.
 
@@ -140,13 +140,13 @@ all_off
 
 Load behaviour:
 
-| Load State | Non-Critical A | Non-Critical B | Critical A | Critical B | Load |
-|---|---|---|---|---|---|
-| normal | ON | ON | ON | ON | 100% |
-| low_runtime | OFF | OFF | ON | ON | 60% |
-| critical_runtime | OFF | OFF | ON | OFF | 35% |
-| safe | OFF | OFF | ON | OFF | 30% |
-| all_off | OFF | OFF | OFF | OFF | 0% |
+| Load State       | Non-Critical A | Non-Critical B | Critical A | Critical B | Load |
+| ---------------- | -------------- | -------------- | ---------- | ---------- | ---- |
+| normal           | ON             | ON             | ON         | ON         | 100% |
+| low_runtime      | OFF            | OFF            | ON         | ON         | 60%  |
+| critical_runtime | OFF            | OFF            | ON         | OFF        | 35%  |
+| safe             | OFF            | OFF            | ON         | OFF        | 30%  |
+| all_off          | OFF            | OFF            | OFF        | OFF        | 0%   |
 
 ### Mobile App Features
 
@@ -306,22 +306,22 @@ bblanchon/ArduinoJson
 
 Use this pin plan unless you intentionally change the firmware.
 
-| Component | ESP32 Pin |
-|---|---|
-| DHT22 DATA | GPIO4 |
-| Green System LED | GPIO23 |
-| OLED SDA | GPIO21 |
-| OLED SCL | GPIO22 |
-| Grid Sense | GPIO33 |
-| Generator Sense | GPIO34 |
-| MQ135 AO | GPIO35 |
-| Voltage Sensor | GPIO36 optional |
-| Fan Relay | GPIO25 |
-| Non-Critical Relay A | GPIO26 |
-| Non-Critical Relay B | GPIO27 |
-| Critical Relay A | GPIO14 |
-| Critical Relay B | GPIO13 |
-| Spare Relay | GPIO15 |
+| Component            | ESP32 Pin       |
+| -------------------- | --------------- |
+| DHT22 DATA           | GPIO4           |
+| Green System LED     | GPIO23          |
+| OLED SDA             | GPIO21          |
+| OLED SCL             | GPIO22          |
+| Grid Sense           | GPIO33          |
+| Generator Sense      | GPIO34          |
+| MQ135 AO             | GPIO35          |
+| Voltage Sensor       | GPIO36 optional |
+| Fan Relay            | GPIO25          |
+| Non-Critical Relay A | GPIO26          |
+| Non-Critical Relay B | GPIO27          |
+| Critical Relay A     | GPIO14          |
+| Critical Relay B     | GPIO13          |
+| Spare Relay          | GPIO15          |
 
 Relay logic:
 
