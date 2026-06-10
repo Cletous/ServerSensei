@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,34 +11,25 @@ import {
   Text,
   View,
 } from "react-native";
-import { router } from "expo-router";
-import { clearToken } from "../../src/storage/authStorage";
-import {
-  createCommand,
-  getDecisionEvaluation,
-  getDevices,
-  getTelemetryHistory,
-} from "../../src/api/client";
-import { LineChartCard } from "../../src/components/LineChartCard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { getDecisionEvaluation, getDevices } from "../../src/api/client";
+import { colors } from "../../src/theme/colors";
 import type {
   DecisionEvaluation,
   Device,
-  TelemetryHistoryPoint,
+  RecentAlert,
 } from "../../src/types/api";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDateTime } from "../../src/utils/dateTime";
-import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
+
   const [devices, setDevices] = useState<Device[]>([]);
   const [evaluation, setEvaluation] = useState<DecisionEvaluation | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState(DEFAULT_DEVICE_ID);
-  const [sendingCommand, setSendingCommand] = useState(false);
-
-  const [history, setHistory] = useState<TelemetryHistoryPoint[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,13 +53,10 @@ export default function DashboardScreen() {
 
       const decisionData = await getDecisionEvaluation(targetDevice.device_id);
       setEvaluation(decisionData);
-
-      const historyData = await getTelemetryHistory(targetDevice.device_id, 30);
-      setHistory(historyData);
     } catch (error) {
       Alert.alert(
-        "Dashboard error",
-        "Could not load dashboard. Check backend, JWT token, and network.",
+        "Overview error",
+        "Could not load system overview. Check backend, JWT token, and network.",
       );
     } finally {
       setLoading(false);
@@ -79,63 +69,17 @@ export default function DashboardScreen() {
     await loadDashboard();
   }
 
-  async function handleLogout() {
-    await clearToken();
-    router.replace("/login");
-  }
-
-  async function sendCommand(
-    action: string,
-    payload?: Record<string, unknown>,
-  ) {
-    try {
-      setSendingCommand(true);
-
-      await createCommand({
-        device_id: selectedDeviceId,
-        action,
-        payload,
-      });
-
-      Alert.alert(
-        "Command queued",
-        "The command has been sent to the backend. The ESP32 will execute it on its next command poll.",
-      );
-
-      await loadDashboard();
-    } catch (error) {
-      Alert.alert(
-        "Command failed",
-        "Could not send command. Check your login, backend, and device registration.",
-      );
-    } finally {
-      setSendingCommand(false);
-    }
-  }
-
-  async function setDeviceMode(mode: string) {
-    await sendCommand("set_mode", { mode });
-  }
-
-  async function setLoadState(state: string) {
-    await sendCommand("set_load_state", { state });
-  }
-
-  async function setBatteryPercent(batteryPercent: number) {
-    await sendCommand("set_battery_percent", {
-      battery_percent: batteryPercent,
-    });
-  }
-
   useEffect(() => {
     loadDashboard();
 
-    const intervalId = setInterval(() => {
-      loadDashboard();
-    }, 10000);
-
+    const intervalId = setInterval(loadDashboard, 10000);
     return () => clearInterval(intervalId);
   }, []);
+
+  const healthScore = useMemo(
+    () => calculateHealthScore(evaluation),
+    [evaluation],
+  );
 
   if (loading) {
     return (
@@ -149,16 +93,37 @@ export default function DashboardScreen() {
         ]}
       >
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+        <Text style={styles.loadingText}>Loading ServerSensei overview...</Text>
       </View>
     );
   }
 
-  function getSeries(key: keyof TelemetryHistoryPoint): number[] {
-    return history
-      .map((point) => point[key])
-      .filter((value): value is number => typeof value === "number");
+  if (!evaluation) {
+    return (
+      <View
+        style={[
+          styles.center,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
+        <Ionicons name="server-outline" size={42} color={colors.mutedText} />
+        <Text style={styles.emptyTitle}>No device available</Text>
+        <Text style={styles.emptyText}>
+          Register or connect your ESP32 device to view the operations overview.
+        </Text>
+
+        <Pressable style={styles.primaryButton} onPress={loadDashboard}>
+          <Text style={styles.primaryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
   }
+
+  const statusTone = getSystemTone(evaluation);
+  const recentAlerts = evaluation.recent_alerts || [];
 
   return (
     <ScrollView
@@ -166,8 +131,8 @@ export default function DashboardScreen() {
       contentContainerStyle={[
         styles.content,
         {
-          paddingTop: insets.top + 16,
-          paddingBottom: insets.bottom + 90,
+          paddingTop: insets.top + 18,
+          paddingBottom: insets.bottom + 28,
         },
       ]}
       refreshControl={
@@ -176,472 +141,1115 @@ export default function DashboardScreen() {
     >
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>ServerSensei</Text>
-          <Text style={styles.subtitle}>Intelligent Monitoring Dashboard</Text>
+          <Text style={styles.eyebrow}>ServerSensei Operations</Text>
+          <Text style={styles.title}>Overview</Text>
         </View>
 
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+        <View
+          style={[
+            styles.livePill,
+            {
+              backgroundColor: evaluation.online
+                ? colors.primarySoft
+                : "#FEF2F2",
+              borderColor: evaluation.online ? colors.primary : colors.critical,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.liveDot,
+              {
+                backgroundColor: evaluation.online
+                  ? colors.success
+                  : colors.critical,
+              },
+            ]}
+          />
+          <Text
+            style={[
+              styles.liveText,
+              {
+                color: evaluation.online ? colors.primaryDark : colors.critical,
+              },
+            ]}
+          >
+            {evaluation.online ? "LIVE" : "OFFLINE"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.deviceCard}>
+        <View style={styles.deviceIcon}>
+          <Ionicons
+            name="hardware-chip-outline"
+            size={24}
+            color={colors.primaryDark}
+          />
+        </View>
+
+        <View style={styles.deviceText}>
+          <Text style={styles.deviceName}>{evaluation.device_name}</Text>
+          <Text style={styles.deviceMeta}>{evaluation.device_id}</Text>
+          <Text style={styles.deviceMeta}>
+            Last telemetry:{" "}
+            {evaluation.latest_telemetry_at
+              ? formatDateTime(evaluation.latest_telemetry_at)
+              : "Not available"}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.heroCard,
+          {
+            borderColor: statusTone.border,
+            backgroundColor: statusTone.background,
+          },
+        ]}
+      >
+        <View style={styles.heroTopRow}>
+          <View>
+            <Text style={styles.heroLabel}>System Health Score</Text>
+            <Text style={styles.heroScore}>{healthScore}</Text>
+            <Text style={styles.heroScoreSuffix}>/100</Text>
+          </View>
+
+          <View
+            style={[
+              styles.heroIcon,
+              {
+                backgroundColor: statusTone.iconBackground,
+              },
+            ]}
+          >
+            <Ionicons
+              name={statusTone.icon}
+              size={34}
+              color={statusTone.color}
+            />
+          </View>
+        </View>
+
+        <View style={styles.healthBarTrack}>
+          <View
+            style={[
+              styles.healthBarFill,
+              {
+                width: `${healthScore}%`,
+                backgroundColor: statusTone.color,
+              },
+            ]}
+          />
+        </View>
+
+        <Text style={styles.heroStatus}>{statusTone.title}</Text>
+        <Text style={styles.heroDescription}>
+          {evaluation.evaluation_summary ||
+            evaluation.system_recommendation ||
+            "System status is being evaluated from latest telemetry."}
+        </Text>
+      </View>
+
+      <View style={styles.kpiGrid}>
+        <KpiCard
+          icon="thermometer-outline"
+          title="Temperature"
+          value={
+            evaluation.temperature == null
+              ? "N/A"
+              : `${evaluation.temperature.toFixed(1)} °C`
+          }
+          subtitle={`Risk: ${evaluation.environmental_risk || "unknown"}`}
+          tone={getRiskColor(evaluation.environmental_risk)}
+          onPress={() => router.push("/environment")}
+        />
+
+        <KpiCard
+          icon="water-outline"
+          title="Humidity"
+          value={
+            evaluation.humidity == null
+              ? "N/A"
+              : `${evaluation.humidity.toFixed(1)} %`
+          }
+          subtitle={evaluation.air_quality_status || "Air quality unknown"}
+          tone={colors.info}
+          onPress={() => router.push("/environment")}
+        />
+
+        <KpiCard
+          icon="flash-outline"
+          title="Power Source"
+          value={(evaluation.power_source || "unknown").toUpperCase()}
+          subtitle={`Battery ${formatPercent(evaluation.battery_percent)}`}
+          tone={getPowerColor(evaluation.power_source)}
+          onPress={() => router.push("/power")}
+        />
+
+        <KpiCard
+          icon="time-outline"
+          title="Runtime"
+          value={
+            evaluation.estimated_runtime_minutes == null
+              ? "N/A"
+              : `${evaluation.estimated_runtime_minutes.toFixed(1)} min`
+          }
+          subtitle={`Load ${formatPercent(evaluation.load_percent)}`}
+          tone={colors.secondary}
+          onPress={() => router.push("/power")}
+        />
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Quick Navigation</Text>
+        <Text style={styles.sectionSubtitle}>
+          Focused views, not crowded panels
+        </Text>
+      </View>
+
+      <View style={styles.actionGrid}>
+        <ActionCard
+          icon="pulse-outline"
+          title="Monitor"
+          subtitle="Environment, power, and trends"
+          onPress={() => router.push("/monitor")}
+        />
+
+        <ActionCard
+          icon="snow-outline"
+          title="Operations"
+          subtitle="Cooling and server controls"
+          onPress={() => router.push("/commands")}
+        />
+
+        <ActionCard
+          icon="warning-outline"
+          title="Alerts"
+          subtitle={`${evaluation.alert_count_recent} recent incident(s)`}
+          onPress={() => router.push("/alerts")}
+        />
+
+        <ActionCard
+          icon="settings-outline"
+          title="Settings"
+          subtitle="Thresholds and runtime config"
+          onPress={() => router.push("/settings")}
+        />
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Infrastructure Snapshot</Text>
+        <Text style={styles.sectionSubtitle}>
+          Current simulated relay state
+        </Text>
+      </View>
+
+      <View style={styles.serverGrid}>
+        <ServerMiniCard
+          title="Critical A"
+          critical
+          isOn={evaluation.critical_server_a_on}
+        />
+        <ServerMiniCard
+          title="Critical B"
+          critical
+          isOn={evaluation.critical_server_b_on}
+        />
+        <ServerMiniCard
+          title="Non-Critical A"
+          isOn={evaluation.non_critical_server_a_on}
+        />
+        <ServerMiniCard
+          title="Non-Critical B"
+          isOn={evaluation.non_critical_server_b_on}
+        />
+      </View>
+
+      <View style={styles.recommendationCard}>
+        <View style={styles.recommendationHeader}>
+          <View style={styles.recommendationIcon}>
+            <Ionicons
+              name="bulb-outline"
+              size={20}
+              color={colors.primaryDark}
+            />
+          </View>
+
+          <Text style={styles.recommendationTitle}>
+            Decision Recommendation
+          </Text>
+        </View>
+
+        <Text style={styles.recommendationText}>
+          {evaluation.system_recommendation ||
+            "No recommendation available from the decision engine yet."}
+        </Text>
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recent Alerts</Text>
+        <Pressable onPress={() => router.push("/alerts")}>
+          <Text style={styles.viewAllText}>View all</Text>
         </Pressable>
       </View>
 
-      {!evaluation ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>No Device Data</Text>
-          <Text>No telemetry has been received yet.</Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{evaluation.device_name}</Text>
-            <Text style={styles.muted}>{evaluation.device_id}</Text>
-
-            <View style={styles.statusRow}>
-              <StatusPill
-                label={evaluation.online ? "Online" : "Offline"}
-                tone={evaluation.online ? "good" : "bad"}
-              />
-              <StatusPill
-                label={evaluation.environmental_risk || "unknown"}
-                tone={riskToTone(evaluation.environmental_risk)}
-              />
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Decision Evaluation</Text>
-            <Text style={styles.summary}>{evaluation.evaluation_summary}</Text>
-
-            <Text style={styles.recommendationTitle}>Recommendation</Text>
-            <Text style={styles.recommendation}>
-              {evaluation.system_recommendation || "No recommendation yet."}
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Cooling Status</Text>
-
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Fan Relay</Text>
-              <Text
-                style={[
-                  styles.metricValue,
-                  {
-                    color: evaluation.fan_on
-                      ? colors.success
-                      : colors.mutedText,
-                  },
-                ]}
-              >
-                {evaluation.fan_on ? "ON" : "OFF"}
+      <View style={styles.alertCard}>
+        {recentAlerts.length === 0 ? (
+          <View style={styles.noAlertBox}>
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={26}
+              color={colors.success}
+            />
+            <View>
+              <Text style={styles.noAlertTitle}>No recent alerts</Text>
+              <Text style={styles.noAlertText}>
+                The backend has not reported recent warning or critical events.
               </Text>
             </View>
-
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Cooling Mode</Text>
-              <Text style={styles.metricValue}>
-                {evaluation.mode === "manual"
-                  ? "Manual Control"
-                  : "Automatic Control"}
-              </Text>
-            </View>
-
-            <Text style={styles.muted}>
-              {evaluation.cooling_reason ||
-                "Cooling status is waiting for latest telemetry."}
-            </Text>
           </View>
+        ) : (
+          recentAlerts
+            .slice(0, 3)
+            .map((alert, index) => (
+              <RecentAlertRow
+                key={`${alert.alert_type}-${alert.created_at}-${index}`}
+                alert={alert}
+              />
+            ))
+        )}
+      </View>
 
-          <View style={styles.grid}>
-            <MetricCard
-              label="Temperature"
-              value={formatValue(evaluation.temperature, "°C")}
-            />
-            <MetricCard
-              label="Humidity"
-              value={formatValue(evaluation.humidity, "%")}
-            />
-            <MetricCard
-              label="Battery"
-              value={formatValue(evaluation.battery_percent, "%")}
-            />
-            <MetricCard
-              label="Load"
-              value={formatValue(evaluation.load_percent, "%")}
-            />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Power</Text>
-            <InfoRow label="Source" value={evaluation.power_source || "--"} />
-            <InfoRow
-              label="Runtime"
-              value={
-                evaluation.estimated_runtime_minutes === null
-                  ? "--"
-                  : `${evaluation.estimated_runtime_minutes} min`
-              }
-            />
-            <InfoRow label="Mode" value={evaluation.mode} />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Air Quality</Text>
-            <InfoRow
-              label="Status"
-              value={evaluation.air_quality_status || "--"}
-            />
-            <InfoRow
-              label="Raw"
-              value={
-                evaluation.air_quality_raw === null
-                  ? "--"
-                  : String(evaluation.air_quality_raw)
-              }
-            />
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trend Monitoring</Text>
-            <Text style={styles.sectionSubtitle}>
-              Recent readings from the latest telemetry history.
-            </Text>
-          </View>
-
-          <LineChartCard
-            title="Temperature"
-            valueLabel="Server room heat level"
-            unit="°C"
-            data={getSeries("temperature")}
-          />
-
-          <LineChartCard
-            title="Humidity"
-            valueLabel="Moisture level"
-            unit="%"
-            data={getSeries("humidity")}
-          />
-
-          <LineChartCard
-            title="Air Quality"
-            valueLabel="MQ135 raw reading"
-            data={getSeries("air_quality_raw")}
-          />
-
-          <LineChartCard
-            title="Battery Percentage"
-            valueLabel="UPS battery simulation"
-            unit="%"
-            data={getSeries("battery_percent")}
-          />
-
-          <LineChartCard
-            title="Load Percentage"
-            valueLabel="Active server/load level"
-            unit="%"
-            data={getSeries("load_percent")}
-          />
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Recent Alerts</Text>
-            <Text style={styles.muted}>
-              Count: {evaluation.alert_count_recent} | Highest:{" "}
-              {evaluation.highest_recent_severity || "none"}
-            </Text>
-
-            {evaluation.recent_alerts.length === 0 ? (
-              <Text style={styles.emptyText}>No recent alerts.</Text>
-            ) : (
-              evaluation.recent_alerts.map((alert, index) => (
-                <View key={`${alert.alert_type}-${index}`} style={styles.alert}>
-                  <Text style={styles.alertType}>{alert.alert_type}</Text>
-                  <Text style={styles.muted}>{alert.severity}</Text>
-                  <Text>{alert.message}</Text>
-                  <Text style={styles.alertDate}>
-                    {formatDateTime(alert.created_at)}
-                  </Text>
-                </View>
-              ))
-            )}
-          </View>
-        </>
-      )}
+      <Text style={styles.footerText}>
+        Monitoring {devices.length} registered device
+        {devices.length === 1 ? "" : "s"}.
+      </Text>
     </ScrollView>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-    </View>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
-function StatusPill({
-  label,
+function KpiCard({
+  icon,
+  title,
+  value,
+  subtitle,
   tone,
-}: {
-  label: string;
-  tone: "good" | "warn" | "bad" | "neutral";
-}) {
-  return (
-    <View style={[styles.pill, styles[`pill_${tone}`]]}>
-      <Text style={styles.pillText}>{label}</Text>
-    </View>
-  );
-}
-
-function CommandButton({
-  label,
-  disabled,
   onPress,
 }: {
-  label: string;
-  disabled: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  value: string;
+  subtitle: string;
+  tone: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
-      style={[styles.commandButton, disabled && styles.commandButtonDisabled]}
       onPress={onPress}
-      disabled={disabled}
+      style={({ pressed }) => [styles.kpiCard, pressed && styles.cardPressed]}
     >
-      <Text style={styles.commandButtonText}>{label}</Text>
+      <View
+        style={[
+          styles.kpiIcon,
+          {
+            backgroundColor: softenColor(tone),
+          },
+        ]}
+      >
+        <Ionicons name={icon} size={22} color={tone} />
+      </View>
+
+      <Text style={styles.kpiTitle}>{title}</Text>
+      <Text style={styles.kpiValue}>{value}</Text>
+      <Text style={styles.kpiSubtitle}>{subtitle}</Text>
     </Pressable>
   );
 }
 
-function riskToTone(risk: string | null): "good" | "warn" | "bad" | "neutral" {
-  if (risk === "normal") return "good";
-  if (risk === "warning" || risk === "high") return "warn";
-  if (risk === "critical") return "bad";
-  return "neutral";
+function ActionCard({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionCard,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      <View style={styles.actionIcon}>
+        <Ionicons name={icon} size={22} color={colors.primaryDark} />
+      </View>
+
+      <View style={styles.actionText}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionSubtitle}>{subtitle}</Text>
+      </View>
+
+      <Ionicons
+        name="chevron-forward-outline"
+        size={18}
+        color={colors.mutedText}
+      />
+    </Pressable>
+  );
 }
 
-function formatValue(value: number | null, suffix: string): string {
-  if (value === null || value === undefined) {
-    return "--";
+function ServerMiniCard({
+  title,
+  isOn,
+  critical = false,
+}: {
+  title: string;
+  isOn: boolean | null;
+  critical?: boolean;
+}) {
+  const powered = Boolean(isOn);
+
+  return (
+    <View style={[styles.serverCard, critical && styles.serverCardCritical]}>
+      <View style={styles.serverTopRow}>
+        <Ionicons
+          name={critical ? "shield-checkmark-outline" : "server-outline"}
+          size={20}
+          color={critical ? colors.critical : colors.primaryDark}
+        />
+
+        <View
+          style={[
+            styles.serverDot,
+            {
+              backgroundColor: powered ? colors.success : colors.mutedText,
+            },
+          ]}
+        />
+      </View>
+
+      <Text style={styles.serverTitle}>{title}</Text>
+      <Text
+        style={[
+          styles.serverState,
+          {
+            color: powered ? colors.success : colors.mutedText,
+          },
+        ]}
+      >
+        {powered ? "POWERED ON" : "POWERED OFF"}
+      </Text>
+    </View>
+  );
+}
+
+function RecentAlertRow({ alert }: { alert: RecentAlert }) {
+  const severityColor = getSeverityColor(alert.severity);
+
+  return (
+    <View style={styles.alertRow}>
+      <View
+        style={[
+          styles.alertIcon,
+          {
+            backgroundColor: softenColor(severityColor),
+          },
+        ]}
+      >
+        <Ionicons
+          name={
+            alert.severity?.toLowerCase() === "critical"
+              ? "alert-circle-outline"
+              : "warning-outline"
+          }
+          size={20}
+          color={severityColor}
+        />
+      </View>
+
+      <View style={styles.alertText}>
+        <Text style={styles.alertTitle}>{alert.message}</Text>
+        <Text style={styles.alertMeta}>
+          {alert.severity.toUpperCase()} · {formatDateTime(alert.created_at)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function calculateHealthScore(evaluation: DecisionEvaluation | null) {
+  if (!evaluation) {
+    return 0;
   }
 
-  return `${value.toFixed(1)}${suffix}`;
+  let score = 100;
+
+  if (!evaluation.online) {
+    score -= 40;
+  }
+
+  const risk = (evaluation.environmental_risk || "").toLowerCase();
+
+  if (risk.includes("hazard") || risk.includes("critical")) {
+    score -= 30;
+  } else if (risk.includes("poor") || risk.includes("high")) {
+    score -= 20;
+  } else if (risk.includes("moderate") || risk.includes("warning")) {
+    score -= 10;
+  }
+
+  const severity = (evaluation.highest_recent_severity || "").toLowerCase();
+
+  if (severity === "critical") {
+    score -= 25;
+  } else if (severity === "warning") {
+    score -= 12;
+  }
+
+  const battery = evaluation.battery_percent ?? 100;
+  const runtime = evaluation.estimated_runtime_minutes ?? 60;
+
+  if (battery <= 10) {
+    score -= 25;
+  } else if (battery <= 25) {
+    score -= 12;
+  }
+
+  if (runtime <= 0.35) {
+    score -= 25;
+  } else if (runtime <= 0.75) {
+    score -= 12;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function getSystemTone(evaluation: DecisionEvaluation) {
+  if (!evaluation.online) {
+    return {
+      title: "Device Offline",
+      color: colors.critical,
+      border: "#FECACA",
+      background: "#FEF2F2",
+      iconBackground: "#FEE2E2",
+      icon: "cloud-offline-outline" as keyof typeof Ionicons.glyphMap,
+    };
+  }
+
+  const severity = (evaluation.highest_recent_severity || "").toLowerCase();
+  const risk = (evaluation.environmental_risk || "").toLowerCase();
+
+  if (
+    severity === "critical" ||
+    risk.includes("critical") ||
+    risk.includes("hazard")
+  ) {
+    return {
+      title: "Critical Attention Required",
+      color: colors.critical,
+      border: "#FECACA",
+      background: "#FEF2F2",
+      iconBackground: "#FEE2E2",
+      icon: "alert-circle-outline" as keyof typeof Ionicons.glyphMap,
+    };
+  }
+
+  if (
+    severity === "warning" ||
+    risk.includes("poor") ||
+    risk.includes("high") ||
+    risk.includes("moderate")
+  ) {
+    return {
+      title: "Warning Conditions Detected",
+      color: colors.warning,
+      border: "#FED7AA",
+      background: "#FFFBEB",
+      iconBackground: "#FEF3C7",
+      icon: "warning-outline" as keyof typeof Ionicons.glyphMap,
+    };
+  }
+
+  return {
+    title: "System Operating Normally",
+    color: colors.success,
+    border: "#BBF7D0",
+    background: colors.card,
+    iconBackground: colors.primarySoft,
+    icon: "shield-checkmark-outline" as keyof typeof Ionicons.glyphMap,
+  };
+}
+
+function getRiskColor(risk: string | null) {
+  const normalized = (risk || "").toLowerCase();
+
+  if (
+    normalized.includes("critical") ||
+    normalized.includes("hazard") ||
+    normalized.includes("poor")
+  ) {
+    return colors.critical;
+  }
+
+  if (normalized.includes("moderate") || normalized.includes("warning")) {
+    return colors.warning;
+  }
+
+  if (normalized.includes("good") || normalized.includes("normal")) {
+    return colors.success;
+  }
+
+  return colors.info;
+}
+
+function getPowerColor(powerSource: string | null) {
+  const normalized = (powerSource || "").toLowerCase();
+
+  if (normalized.includes("grid")) {
+    return colors.success;
+  }
+
+  if (normalized.includes("generator")) {
+    return colors.info;
+  }
+
+  if (normalized.includes("ups") || normalized.includes("battery")) {
+    return colors.warning;
+  }
+
+  return colors.secondary;
+}
+
+function getSeverityColor(severity: string | null) {
+  const normalized = (severity || "").toLowerCase();
+
+  if (normalized === "critical") {
+    return colors.critical;
+  }
+
+  if (normalized === "warning") {
+    return colors.warning;
+  }
+
+  return colors.info;
+}
+
+function formatPercent(value: number | null) {
+  if (value == null) {
+    return "N/A";
+  }
+
+  return `${value.toFixed(0)}%`;
+}
+
+function softenColor(color: string) {
+  if (color === colors.critical) {
+    return "#FEF2F2";
+  }
+
+  if (color === colors.warning) {
+    return "#FFFBEB";
+  }
+
+  if (color === colors.info) {
+    return "#EFF6FF";
+  }
+
+  if (color === colors.secondary) {
+    return "#F1F5F9";
+  }
+
+  return colors.primarySoft;
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: colors.background,
   },
+
   content: {
-    padding: 16,
-    paddingBottom: 40,
+    paddingHorizontal: 18,
   },
+
   center: {
     flex: 1,
+    backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
   },
+
   loadingText: {
-    marginTop: 12,
+    color: colors.mutedText,
+    fontWeight: "800",
+    marginTop: 10,
   },
+
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: "900",
+    marginTop: 14,
+  },
+
+  emptyText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 18,
+  },
+
+  primaryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderRadius: 16,
+  },
+
+  primaryButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  subtitle: {
-    color: "#6b7280",
-  },
-  logoutButton: {
-    backgroundColor: "#111827",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  logoutText: {
-    color: "#ffffff",
-    fontWeight: "700",
-  },
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 6,
-  },
-  muted: {
-    color: "#6b7280",
-  },
-  statusRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-    flexWrap: "wrap",
-  },
-  pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-  },
-  pill_good: {
-    backgroundColor: "#dcfce7",
-  },
-  pill_warn: {
-    backgroundColor: "#fef3c7",
-  },
-  pill_bad: {
-    backgroundColor: "#fee2e2",
-  },
-  pill_neutral: {
-    backgroundColor: "#e5e7eb",
-  },
-  pillText: {
-    fontWeight: "700",
-  },
-  summary: {
-    fontSize: 16,
-    lineHeight: 23,
-  },
-  recommendationTitle: {
-    fontWeight: "800",
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  recommendation: {
-    color: "#374151",
-    lineHeight: 22,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 12,
-    marginBottom: 14,
   },
-  metricCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 14,
-    padding: 16,
-    width: "47%",
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-  },
-  infoLabel: {
-    color: "#6b7280",
-  },
-  infoValue: {
-    fontWeight: "700",
-  },
-  emptyText: {
-    marginTop: 10,
-    color: "#6b7280",
-  },
-  alert: {
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-    paddingTop: 12,
-  },
-  alertType: {
-    fontWeight: "800",
-  },
-  commandSectionTitle: {
-    fontWeight: "800",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  commandGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  commandButton: {
-    backgroundColor: "#111827",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  commandButtonDisabled: {
-    opacity: 0.6,
-  },
-  commandButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-  },
-  headerButtons: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  settingsButton: {
-    backgroundColor: "#374151",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  settingsButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-  },
-  alertDate: {
-    marginTop: 6,
-    color: "#6b7280",
-    fontWeight: "700",
-  },
-  sectionHeader: {
-    marginTop: 6,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 22,
+
+  eyebrow: {
+    color: colors.primaryDark,
+    fontSize: 12,
     fontWeight: "900",
-    color: "#0F172A",
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
-  sectionSubtitle: {
-    color: "#64748B",
+
+  title: {
+    color: colors.text,
+    fontSize: 32,
+    fontWeight: "900",
     marginTop: 4,
   },
-  metricRow: {
+
+  livePill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+  },
+
+  liveText: {
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  deviceCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 24,
+    padding: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+
+  deviceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  deviceText: {
+    flex: 1,
+  },
+
+  deviceName: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  deviceMeta: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+
+  heroCard: {
+    borderWidth: 1,
+    borderRadius: 30,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: colors.secondary,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+
+  heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    gap: 16,
   },
-  metricLabel: {
+
+  heroLabel: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+
+  heroScore: {
+    color: colors.text,
+    fontSize: 56,
+    fontWeight: "900",
+    marginTop: 4,
+    lineHeight: 62,
+  },
+
+  heroScoreSuffix: {
     color: colors.mutedText,
     fontSize: 14,
+    fontWeight: "900",
+  },
+
+  heroIcon: {
+    width: 66,
+    height: 66,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  healthBarTrack: {
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: colors.secondarySoft,
+    overflow: "hidden",
+    marginTop: 16,
+  },
+
+  healthBarFill: {
+    height: "100%",
+    borderRadius: 999,
+  },
+
+  heroStatus: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 16,
+  },
+
+  heroDescription: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 8,
+  },
+
+  kpiGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+
+  kpiCard: {
+    width: "48%",
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 14,
+    minHeight: 160,
+  },
+
+  cardPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.99 }],
+  },
+
+  kpiIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+
+  kpiTitle: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  kpiValue: {
+    color: colors.text,
+    fontSize: 21,
+    fontWeight: "900",
+    marginTop: 7,
+  },
+
+  kpiSubtitle: {
+    color: colors.mutedText,
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 16,
+    marginTop: 5,
+  },
+
+  sectionHeader: {
+    marginTop: 20,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  sectionSubtitle: {
+    color: colors.mutedText,
+    fontSize: 11,
     fontWeight: "700",
   },
-  metricValue: {
+
+  viewAllText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  actionGrid: {
+    gap: 12,
+  },
+
+  actionCard: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  actionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  actionText: {
+    flex: 1,
+  },
+
+  actionTitle: {
     color: colors.text,
     fontSize: 15,
     fontWeight: "900",
+  },
+
+  actionSubtitle: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+
+  serverGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+
+  serverCard: {
+    width: "48%",
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 14,
+  },
+
+  serverCardCritical: {
+    borderColor: "#FECACA",
+  },
+
+  serverTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  serverDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+  },
+
+  serverTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+    marginTop: 12,
+  },
+
+  serverState: {
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 5,
+  },
+
+  recommendationCard: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 18,
+  },
+
+  recommendationHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  recommendationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 15,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  recommendationTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+
+  recommendationText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 12,
+  },
+
+  alertCard: {
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 14,
+  },
+
+  alertRow: {
+    flexDirection: "row",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+
+  alertIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  alertText: {
+    flex: 1,
+  },
+
+  alertTitle: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 18,
+  },
+
+  alertMeta: {
+    color: colors.mutedText,
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+
+  noAlertBox: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+
+  noAlertTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  noAlertText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    marginTop: 2,
+  },
+
+  footerText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: 18,
   },
 });
