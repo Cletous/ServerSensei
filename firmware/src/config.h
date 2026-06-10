@@ -31,9 +31,9 @@ inline constexpr float ADC_REFERENCE_VOLTAGE = 3.3;
 inline constexpr int ADC_MAX = 4095;
 
 // First-boot fallback values that can be changed at runtime without recompiling.
-inline constexpr const char *DEFAULT_WIFI_SSID = "Deld";
-inline constexpr const char *DEFAULT_WIFI_PASSWORD = "123123124oq";
-inline constexpr const char *DEFAULT_BACKEND_URL = "http://10.52.92.124:8000";
+inline constexpr const char *DEFAULT_WIFI_SSID = "Gsal";
+inline constexpr const char *DEFAULT_WIFI_PASSWORD = "hi123and125";
+inline constexpr const char *DEFAULT_BACKEND_URL = "http://10.128.44.124:8000";
 
 inline constexpr const char *DEVICE_NAME = "ServerSensei";
 inline constexpr const char *DEVICE_ID = "serversensei-esp32-001";
