@@ -18,6 +18,24 @@ router = APIRouter(
     tags=["Commands"]
 )
 
+MANUAL_ONLY_COMMANDS = [
+    "fan_on",
+    "fan_off",
+    "set_fan",
+    "server_on",
+    "server_off",
+    "set_relay",
+    "set_load_state",
+    "normal",
+    "low_runtime",
+    "critical_runtime",
+    "safe",
+    "all_off",
+]
+
+def command_requires_manual_mode(action: str) -> bool:
+    return action in MANUAL_ONLY_COMMANDS
+
 def build_command_response(command: Command, device: Device) -> CommandResponse:
     return CommandResponse(
         id=command.id,
@@ -69,6 +87,38 @@ def create_command(
     current_user: User = Depends(get_current_user)
 ):
     device = find_device_by_public_id(db, request.device_id)
+
+    if command_requires_manual_mode(request.action) and device.mode != "manual":
+        create_audit_log(
+            db=db,
+            user_id=current_user.id,
+            device_id=device.id,
+            action="MANUAL_COMMAND_BLOCKED",
+            entity_type="command",
+            entity_id=None,
+            description=(
+                f"User {current_user.email} attempted manual-only command "
+                f"{request.action} while device {device.device_id} was in "
+                f"{device.mode} mode"
+            ),
+            details={
+                "command_action": request.action,
+                "payload": request.payload,
+                "device_id": device.device_id,
+                "current_device_mode": device.mode,
+                "required_device_mode": "manual",
+            },
+        )
+
+        db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "This command requires manual mode. "
+                "Switch the device to manual mode before sending direct controls."
+            )
+        )
 
     if current_user.role == "admin":
         command_status = "pending"
