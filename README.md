@@ -71,11 +71,14 @@ Sensors / Switches / Relays
           ^
           |
           | Wi-Fi / HTTP
-          v
-   FastAPI Backend <--> MySQL Database
           |
           v
- React Native / Expo Mobile App
+   FastAPI Backend <--> MySQL Database
+          ^
+          |
+          |
+          v
+   Mobile Application
 ```
 
 ### Main Layers
