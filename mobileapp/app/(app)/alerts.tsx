@@ -193,7 +193,7 @@ export default function AlertsScreen() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Total Stored history: {alerts.length}
+            Stored history: {alerts.length}
           </Text>
         </View>
 
