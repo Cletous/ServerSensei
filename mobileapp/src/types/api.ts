@@ -49,6 +49,9 @@ export type DecisionEvaluation = {
   environmental_risk: string | null;
   system_recommendation: string | null;
 
+  fan_on: boolean | null;
+  cooling_reason: string | null;
+
   alert_count_recent: number;
   highest_recent_severity: string | null;
   recent_alerts: RecentAlert[];

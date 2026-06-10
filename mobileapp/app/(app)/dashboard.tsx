@@ -25,6 +25,7 @@ import type {
 } from "../../src/types/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -214,6 +215,40 @@ export default function DashboardScreen() {
             <Text style={styles.recommendationTitle}>Recommendation</Text>
             <Text style={styles.recommendation}>
               {evaluation.system_recommendation || "No recommendation yet."}
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Cooling Status</Text>
+
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Fan Relay</Text>
+              <Text
+                style={[
+                  styles.metricValue,
+                  {
+                    color: evaluation.fan_on
+                      ? colors.success
+                      : colors.mutedText,
+                  },
+                ]}
+              >
+                {evaluation.fan_on ? "ON" : "OFF"}
+              </Text>
+            </View>
+
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>Cooling Mode</Text>
+              <Text style={styles.metricValue}>
+                {evaluation.mode === "manual"
+                  ? "Manual Control"
+                  : "Automatic Control"}
+              </Text>
+            </View>
+
+            <Text style={styles.muted}>
+              {evaluation.cooling_reason ||
+                "Cooling status is waiting for latest telemetry."}
             </Text>
           </View>
 
@@ -508,14 +543,6 @@ const styles = StyleSheet.create({
     padding: 16,
     width: "47%",
   },
-  metricLabel: {
-    color: "#6b7280",
-    marginBottom: 8,
-  },
-  metricValue: {
-    fontSize: 24,
-    fontWeight: "800",
-  },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -598,5 +625,23 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     color: "#64748B",
     marginTop: 4,
+  },
+  metricRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  metricLabel: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  metricValue: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
   },
 });

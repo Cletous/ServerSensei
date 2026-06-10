@@ -153,6 +153,9 @@ def get_device_decision_evaluation(
         load_percent=power_status.load_percent if power_status else None,
         estimated_runtime_minutes=estimated_runtime_minutes,
 
+        fan_on=latest_reading.fan_on if latest_reading else None,
+        cooling_reason=latest_reading.cooling_reason if latest_reading else None,
+
         environmental_risk=environmental_risk,
         system_recommendation=(
             latest_reading.system_recommendation

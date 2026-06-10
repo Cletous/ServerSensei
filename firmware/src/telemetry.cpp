@@ -51,6 +51,34 @@ void sendTelemetryToBackend()
     doc["environmental_risk"] = environmentalRisk;
     doc["system_recommendation"] = systemRecommendation;
 
+    // Cooling status
+    doc["fan_on"] = fanRelayState;
+
+    if (loadState == "all_off" || simulatedPowerDepleted)
+    {
+        doc["cooling_reason"] = "Cooling disabled because system is all_off or simulated power is depleted";
+    }
+    else if (deviceMode == "manual" && fanRelayState)
+    {
+        doc["cooling_reason"] = "Fan is running due to manual control";
+    }
+    else if (deviceMode == "manual" && !fanRelayState)
+    {
+        doc["cooling_reason"] = "Fan is off due to manual control";
+    }
+    else if (environmentalRisk == "high" || environmentalRisk == "critical")
+    {
+        doc["cooling_reason"] = "Fan is running due to elevated environmental risk";
+    }
+    else if (fanRelayState)
+    {
+        doc["cooling_reason"] = "Fan is running due to temperature threshold";
+    }
+    else
+    {
+        doc["cooling_reason"] = "Fan is currently off because cooling threshold has not been reached";
+    }
+
     String requestBody;
     serializeJson(doc, requestBody);
 

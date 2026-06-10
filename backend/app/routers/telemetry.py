@@ -54,7 +54,10 @@ def receive_telemetry(
         load_percent=request.load_percent,
 
         environmental_risk=request.environmental_risk,
-        system_recommendation=request.system_recommendation
+        system_recommendation=request.system_recommendation,
+
+        fan_on=request.fan_on,
+        cooling_reason=request.cooling_reason,
     )
 
     db.add(sensor_reading)

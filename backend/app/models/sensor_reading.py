@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -26,6 +26,9 @@ class SensorReading(Base):
 
     environmental_risk = Column(String(50), nullable=True)
     system_recommendation = Column(String(255), nullable=True)
+
+    fan_on = Column(Boolean, nullable=True)
+    cooling_reason = Column(String(255), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),

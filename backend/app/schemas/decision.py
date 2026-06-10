@@ -20,6 +20,9 @@ class DecisionEvaluationResponse(BaseModel):
     air_quality_raw: int | None = None
     air_quality_status: str | None = None
 
+    fan_on: bool | None = None
+    cooling_reason: str | None = None
+
     power_source: str | None = None
     battery_percent: float | None = None
     load_percent: float | None = None
