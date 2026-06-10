@@ -25,6 +25,8 @@ MANUAL_ONLY_COMMANDS = [
     "server_on",
     "server_off",
     "set_relay",
+    "restart_server",
+    "restart_all_servers",
     "set_load_state",
     "normal",
     "low_runtime",

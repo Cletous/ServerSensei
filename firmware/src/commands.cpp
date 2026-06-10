@@ -85,6 +85,8 @@ bool commandRequiresManualMode(String actionValue)
         actionValue == "set_relay" ||
         actionValue == "server_on" ||
         actionValue == "server_off" ||
+        actionValue == "restart_server" ||
+        actionValue == "restart_all_servers" ||
         actionValue == "normal" ||
         actionValue == "low_runtime" ||
         actionValue == "critical_runtime" ||
@@ -216,6 +218,84 @@ bool executeCommand(JsonObject command)
         bool fanOn = payload["on"];
 
         return setFanRelayState(fanOn);
+    }
+
+    if (actionValue == "server_on" || actionValue == "server_off")
+    {
+        JsonObject payload = command["payload"];
+
+        if (payload.isNull())
+        {
+            Serial.println("[Commands] Missing payload for server command");
+            return false;
+        }
+
+        const char *server = payload["server"];
+
+        if (server == nullptr)
+        {
+            Serial.println("[Commands] Missing server value");
+            return false;
+        }
+
+        bool serverOn = actionValue == "server_on";
+
+        return setServerPowerState(String(server), serverOn);
+    }
+
+    if (actionValue == "set_relay")
+    {
+        JsonObject payload = command["payload"];
+
+        if (payload.isNull())
+        {
+            Serial.println("[Commands] Missing payload for set_relay");
+            return false;
+        }
+
+        const char *server = payload["server"];
+
+        if (server == nullptr)
+        {
+            Serial.println("[Commands] Missing server value for set_relay");
+            return false;
+        }
+
+        if (payload["on"].isNull())
+        {
+            Serial.println("[Commands] Missing on value for set_relay");
+            return false;
+        }
+
+        bool serverOn = payload["on"];
+
+        return setServerPowerState(String(server), serverOn);
+    }
+
+    if (actionValue == "restart_server")
+    {
+        JsonObject payload = command["payload"];
+
+        if (payload.isNull())
+        {
+            Serial.println("[Commands] Missing payload for restart_server");
+            return false;
+        }
+
+        const char *server = payload["server"];
+
+        if (server == nullptr)
+        {
+            Serial.println("[Commands] Missing server value for restart_server");
+            return false;
+        }
+
+        return restartServer(String(server));
+    }
+
+    if (actionValue == "restart_all_servers")
+    {
+        return restartAllServers();
     }
 
     if (actionValue == "set_battery_percent")

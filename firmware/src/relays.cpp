@@ -30,66 +30,37 @@ void setRelayOutputs(
 
 void applyRelayStates()
 {
-    if (loadState == "normal")
+    if (simulatedPowerDepleted || loadState == "all_off")
+    {
+        setRelayOutputs(
+            false,
+            false,
+            false,
+            false,
+            false,
+            false);
+        return;
+    }
+
+    if (deviceMode == "manual")
     {
         setRelayOutputs(
             fanRelayState,
-            true,
-            true,
-            true,
-            true,
+            nonCriticalServerAState,
+            nonCriticalServerBState,
+            criticalServerAState,
+            criticalServerBState,
             false);
+        return;
     }
-    else if (loadState == "low_runtime")
-    {
-        setRelayOutputs(
-            fanRelayState,
-            false,
-            false,
-            true,
-            true,
-            false);
-    }
-    else if (loadState == "critical_runtime")
-    {
-        setRelayOutputs(
-            fanRelayState,
-            false,
-            false,
-            true,
-            false,
-            false);
-    }
-    else if (loadState == "safe")
-    {
-        setRelayOutputs(
-            fanRelayState,
-            false,
-            false,
-            true,
-            false,
-            false);
-    }
-    else if (loadState == "all_off")
-    {
-        setRelayOutputs(
-            false,
-            false,
-            false,
-            false,
-            false,
-            false);
-    }
-    else
-    {
-        setRelayOutputs(
-            false,
-            false,
-            false,
-            false,
-            false,
-            false);
-    }
+
+    setRelayOutputs(
+        fanRelayState,
+        nonCriticalServerAState,
+        nonCriticalServerBState,
+        criticalServerAState,
+        criticalServerBState,
+        false);
 }
 
 void setupRelays()
@@ -128,6 +99,115 @@ bool setFanRelayState(bool fanOn)
         Serial.println("[Fan] Manual fan command: ON");
     else
         Serial.println("[Fan] Manual fan command: OFF");
+
+    return true;
+}
+
+bool isValidServerId(String serverId)
+{
+    return (
+        serverId == "non_critical_a" ||
+        serverId == "non_critical_b" ||
+        serverId == "critical_a" ||
+        serverId == "critical_b");
+}
+
+bool setServerPowerState(String serverId, bool serverOn)
+{
+    if (!isValidServerId(serverId))
+    {
+        Serial.print("[Servers] Invalid server id: ");
+        Serial.println(serverId);
+        return false;
+    }
+
+    if (serverOn && simulatedPowerDepleted)
+    {
+        Serial.println("[Servers] Cannot turn server ON: simulated power is depleted");
+        return false;
+    }
+
+    if (serverOn && loadState == "all_off")
+    {
+        loadState = "manual_override";
+    }
+
+    if (serverId == "non_critical_a")
+        nonCriticalServerAState = serverOn;
+    else if (serverId == "non_critical_b")
+        nonCriticalServerBState = serverOn;
+    else if (serverId == "critical_a")
+        criticalServerAState = serverOn;
+    else if (serverId == "critical_b")
+        criticalServerBState = serverOn;
+
+    loadState = "manual_override";
+
+    applyRelayStates();
+
+    Serial.print("[Servers] ");
+    Serial.print(serverId);
+    Serial.print(" set to ");
+    Serial.println(serverOn ? "ON" : "OFF");
+
+    return true;
+}
+
+bool restartServer(String serverId)
+{
+    if (!isValidServerId(serverId))
+    {
+        Serial.print("[Servers] Invalid restart server id: ");
+        Serial.println(serverId);
+        return false;
+    }
+
+    if (simulatedPowerDepleted)
+    {
+        Serial.println("[Servers] Cannot restart server: simulated power is depleted");
+        return false;
+    }
+
+    Serial.print("[Servers] Restarting ");
+    Serial.println(serverId);
+
+    setServerPowerState(serverId, false);
+    delay(700);
+    setServerPowerState(serverId, true);
+
+    Serial.print("[Servers] Restart complete: ");
+    Serial.println(serverId);
+
+    return true;
+}
+
+bool restartAllServers()
+{
+    if (simulatedPowerDepleted)
+    {
+        Serial.println("[Servers] Cannot restart all servers: simulated power is depleted");
+        return false;
+    }
+
+    Serial.println("[Servers] Restarting all simulated servers");
+
+    nonCriticalServerAState = false;
+    nonCriticalServerBState = false;
+    criticalServerAState = false;
+    criticalServerBState = false;
+    loadState = "manual_override";
+    applyRelayStates();
+
+    delay(1000);
+
+    nonCriticalServerAState = true;
+    nonCriticalServerBState = true;
+    criticalServerAState = true;
+    criticalServerBState = true;
+    loadState = "manual_override";
+    applyRelayStates();
+
+    Serial.println("[Servers] Restart all complete");
 
     return true;
 }

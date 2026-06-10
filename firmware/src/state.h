@@ -16,6 +16,11 @@ extern bool greenLedState;
 
 extern bool fanRelayState;
 
+extern bool nonCriticalServerAState;
+extern bool nonCriticalServerBState;
+extern bool criticalServerAState;
+extern bool criticalServerBState;
+
 extern bool gridAvailable;
 extern bool generatorAvailable;
 extern bool simulatedPowerDepleted;

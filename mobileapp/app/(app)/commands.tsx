@@ -92,6 +92,28 @@ export default function CommandsScreen() {
     await sendCommand("set_load_state", { state });
   }
 
+  type ServerId =
+    | "non_critical_a"
+    | "non_critical_b"
+    | "critical_a"
+    | "critical_b";
+
+  function serverOn(server: ServerId) {
+    return sendCommand("server_on", { server });
+  }
+
+  function serverOff(server: ServerId) {
+    return sendCommand("server_off", { server });
+  }
+
+  function restartServer(server: ServerId) {
+    return sendCommand("restart_server", { server });
+  }
+
+  function restartAllServers() {
+    return sendCommand("restart_all_servers", {});
+  }
+
   async function setFan(on: boolean) {
     await sendCommand("set_fan", { on });
   }
@@ -212,6 +234,103 @@ export default function CommandsScreen() {
       </View>
 
       <View style={styles.card}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionHeaderText}>
+            <Text style={styles.cardTitle}>Server Control Center</Text>
+            <Text style={styles.muted}>
+              Manual server commands control simulated server groups using the
+              relay-based load management policy.
+            </Text>
+          </View>
+
+          <View style={styles.iconBadge}>
+            <Ionicons
+              name="server-outline"
+              size={22}
+              color={colors.primaryDark}
+            />
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderText}>
+              <Text style={styles.cardTitle}>Server Control Center</Text>
+              <Text style={styles.muted}>
+                Individually control each simulated server relay. Load
+                percentage is recalculated from the servers currently powered
+                ON.
+              </Text>
+            </View>
+
+            <View style={styles.iconBadge}>
+              <Ionicons
+                name="server-outline"
+                size={22}
+                color={colors.primaryDark}
+              />
+            </View>
+          </View>
+
+          <ServerControlRow
+            title="Non-Critical Server A"
+            serverId="non_critical_a"
+            disabled={sendingCommand}
+            onServerOn={serverOn}
+            onServerOff={serverOff}
+            onRestartServer={restartServer}
+          />
+
+          <ServerControlRow
+            title="Non-Critical Server B"
+            serverId="non_critical_b"
+            disabled={sendingCommand}
+            onServerOn={serverOn}
+            onServerOff={serverOff}
+            onRestartServer={restartServer}
+          />
+
+          <ServerControlRow
+            title="Critical Server A"
+            serverId="critical_a"
+            disabled={sendingCommand}
+            onServerOn={serverOn}
+            onServerOff={serverOff}
+            onRestartServer={restartServer}
+          />
+
+          <ServerControlRow
+            title="Critical Server B"
+            serverId="critical_b"
+            disabled={sendingCommand}
+            onServerOn={serverOn}
+            onServerOff={serverOff}
+            onRestartServer={restartServer}
+          />
+
+          <CommandButton
+            label="Restart All Servers"
+            disabled={sendingCommand}
+            danger
+            onPress={() =>
+              Alert.alert(
+                "Restart all simulated servers?",
+                "All simulated server relays will briefly turn OFF, then turn back ON.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Restart All",
+                    style: "destructive",
+                    onPress: restartAllServers,
+                  },
+                ],
+              )
+            }
+          />
+        </View>
+      </View>
+
+      <View style={styles.card}>
         <Text style={styles.cardTitle}>Load State</Text>
         <Text style={styles.muted}>
           Load commands require Manual Mode and are rejected when the ESP32 is
@@ -282,22 +401,92 @@ export default function CommandsScreen() {
   );
 }
 
+function ServerControlRow({
+  title,
+  serverId,
+  disabled,
+  onServerOn,
+  onServerOff,
+  onRestartServer,
+}: {
+  title: string;
+  serverId: ServerId;
+  disabled?: boolean;
+  onServerOn: (server: ServerId) => void;
+  onServerOff: (server: ServerId) => void;
+  onRestartServer: (server: ServerId) => void;
+}) {
+  return (
+    <View style={styles.serverControlRow}>
+      <View style={styles.serverControlHeader}>
+        <Ionicons name="hardware-chip-outline" size={18} color={colors.text} />
+        <Text style={styles.serverControlTitle}>{title}</Text>
+      </View>
+
+      <View style={styles.serverControlActions}>
+        <CommandButton
+          label="ON"
+          disabled={disabled}
+          onPress={() => onServerOn(serverId)}
+        />
+        <CommandButton
+          label="OFF"
+          disabled={disabled}
+          danger
+          onPress={() => onServerOff(serverId)}
+        />
+        <CommandButton
+          label="Restart"
+          disabled={disabled}
+          onPress={() =>
+            Alert.alert(
+              `Restart ${title}?`,
+              "This simulated server relay will briefly turn OFF, then turn back ON.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Restart",
+                  onPress: () => onRestartServer(serverId),
+                },
+              ],
+            )
+          }
+        />
+      </View>
+    </View>
+  );
+}
+
 function CommandButton({
   label,
-  disabled,
   onPress,
+  disabled,
+  danger = false,
 }: {
   label: string;
-  disabled: boolean;
   onPress: () => void;
+  disabled?: boolean;
+  danger?: boolean;
 }) {
   return (
     <Pressable
-      style={[styles.commandButton, disabled && styles.commandButtonDisabled]}
-      onPress={onPress}
+      style={({ pressed }) => [
+        styles.commandButton,
+        danger && styles.commandButtonDanger,
+        disabled && styles.commandButtonDisabled,
+        pressed && !disabled && styles.commandButtonPressed,
+      ]}
       disabled={disabled}
+      onPress={onPress}
     >
-      <Text style={styles.commandButtonText}>{label}</Text>
+      <Text
+        style={[
+          styles.commandButtonText,
+          danger && styles.commandButtonDangerText,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -306,6 +495,24 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#f3f4f6",
+  },
+  sectionHeaderText: {
+    flex: 1,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  iconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     padding: 16,
@@ -430,5 +637,44 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 15,
     fontWeight: "900",
+  },
+  commandButtonDanger: {
+    borderColor: colors.critical,
+    backgroundColor: "#FEF2F2",
+  },
+  commandButtonDangerText: {
+    color: colors.critical,
+  },
+  commandButtonPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
+  },
+
+  serverControlRow: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#F9FAFB",
+  },
+
+  serverControlHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+
+  serverControlTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+
+  serverControlActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
 });

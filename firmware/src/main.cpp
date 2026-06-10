@@ -38,6 +38,12 @@ bool greenLedState = false; // System status LED
 // Cooling Fan automation
 bool fanRelayState = false;
 
+// Simulated server relay states
+bool nonCriticalServerAState = true;
+bool nonCriticalServerBState = true;
+bool criticalServerAState = true;
+bool criticalServerBState = true;
+
 // power source states
 bool gridAvailable = false;
 bool generatorAvailable = false;

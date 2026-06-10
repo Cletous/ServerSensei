@@ -2,6 +2,11 @@
 
 bool setFanRelayState(bool fanOn);
 
+bool isValidServerId(String serverId);
+bool setServerPowerState(String serverId, bool serverOn);
+bool restartServer(String serverId);
+bool restartAllServers();
+
 void setupRelays();
 void applyRelayStates();
 void setRelayOutputs(
