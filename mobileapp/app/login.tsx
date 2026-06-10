@@ -48,16 +48,10 @@ export default function LoginScreen() {
         email: response.email,
         role: response.role,
       });
-      if (__DEV__) {
-        console.log(
-          "[Notifications] Skipping remote push registration in Expo Go/dev mode.",
-        );
-      } else {
-        try {
-          await registerDeviceForRemotePush();
-        } catch (error) {
-          console.log("[Notifications] Push registration failed:", error);
-        }
+      try {
+        await registerDeviceForRemotePush();
+      } catch (error) {
+        console.log("[Notifications] Push registration failed:", error);
       }
 
       router.replace("/dashboard");

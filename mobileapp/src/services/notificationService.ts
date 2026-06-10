@@ -14,6 +14,10 @@ Notifications.setNotificationHandler({
   }),
 });
 
+export function isRunningInExpoGo(): boolean {
+  return Constants.appOwnership === "expo";
+}
+
 export async function setupLocalNotifications(): Promise<void> {
   if (Platform.OS === "web") {
     return;
@@ -44,6 +48,13 @@ export async function registerDeviceForRemotePush(): Promise<void> {
     return;
   }
 
+  if (isRunningInExpoGo()) {
+    console.log(
+      "[Notifications] Remote push skipped in Expo Go. Use a development APK or preview APK.",
+    );
+    return;
+  }
+
   const hasPermission = await requestNotificationPermission();
 
   if (!hasPermission) {
@@ -69,7 +80,7 @@ export async function registerDeviceForRemotePush(): Promise<void> {
     platform: Platform.OS,
   });
 
-  console.log("[Notifications] Push token registered.");
+  console.log("[Notifications] Push token registered:", tokenResponse.data);
 }
 
 async function requestNotificationPermission(): Promise<boolean> {

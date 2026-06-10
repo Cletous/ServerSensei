@@ -13,6 +13,9 @@ from app.schemas.command import (
     CommandResultRequest,
 )
 from app.services.audit_service import create_audit_log
+from app.services.push_notification_service import (
+    send_approval_request_push_notifications,
+)
 
 router = APIRouter(
     tags=["Commands"]
@@ -191,6 +194,17 @@ def create_command(
             "device_id": device.device_id,
         },
     )
+
+    if command_status == "awaiting_approval":
+        try:
+            send_approval_request_push_notifications(
+                db=db,
+                command=command,
+                device=device,
+                requested_by=current_user,
+            )
+        except Exception as error:
+            print(f"[Approval Push Notifications] Failed: {error}")
 
     db.commit()
     db.refresh(command)

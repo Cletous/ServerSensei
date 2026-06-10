@@ -8,6 +8,9 @@ from app.schemas.push_token import (
     PushTokenRegisterRequest,
     PushTokenResponse,
 )
+from app.services.push_notification_service import (
+    send_test_push_notification_to_user,
+)
 
 router = APIRouter(
     prefix="/push-tokens",
@@ -46,3 +49,18 @@ def register_push_token(
     db.refresh(push_token)
 
     return push_token
+
+@router.post("/test")
+def send_test_push_notification(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sent_count = send_test_push_notification_to_user(
+        db=db,
+        user=current_user
+    )
+
+    return {
+        "message": "Test push notification attempted",
+        "sent_count": sent_count
+    }

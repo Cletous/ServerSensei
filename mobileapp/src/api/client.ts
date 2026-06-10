@@ -149,6 +149,18 @@ export async function getTelemetryHistory(
   return response.data;
 }
 
+export async function sendRemoteTestPush(): Promise<{
+  message: string;
+  sent_count: number;
+}> {
+  const response = await apiClient.post<{
+    message: string;
+    sent_count: number;
+  }>("/push-tokens/test", {});
+
+  return response.data;
+}
+
 export async function registerPushToken(
   request: PushTokenRegisterRequest
 ): Promise<PushTokenResponse> {

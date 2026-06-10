@@ -15,12 +15,14 @@ import {
   isNotifiableAlert,
   showAlertNotification,
 } from "../../src/services/notificationService";
-import { getDeviceAlerts } from "../../src/api/client";
+import { getDeviceAlerts, sendRemoteTestPush } from "../../src/api/client";
 import type { AlertItem } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
 import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
+
+const ALERTS_PER_PAGE = 10;
 
 export default function AlertsScreen() {
   const insets = useSafeAreaInsets();
@@ -28,6 +30,21 @@ export default function AlertsScreen() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const recentAlertsLast10Minutes = alerts.filter((alert) => {
+    const alertTime = new Date(alert.created_at).getTime();
+    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+
+    return alertTime >= tenMinutesAgo;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(alerts.length / ALERTS_PER_PAGE));
+
+  const paginatedAlerts = alerts.slice(
+    (currentPage - 1) * ALERTS_PER_PAGE,
+    currentPage * ALERTS_PER_PAGE,
+  );
 
   const firstLoadRef = useRef(true);
   const notifiedAlertIdsRef = useRef<Set<number>>(new Set());
@@ -105,6 +122,28 @@ export default function AlertsScreen() {
   }
 
   async function sendTestNotification() {
+    try {
+      const result = await sendRemoteTestPush();
+
+      if (result.sent_count > 0) {
+        Alert.alert(
+          "Remote push sent",
+          `Backend attempted ${result.sent_count} remote push notification(s).`,
+        );
+        return;
+      }
+
+      Alert.alert(
+        "No remote token found",
+        "No registered remote push token was found for this user. A local test notification will be shown instead.",
+      );
+    } catch (error) {
+      Alert.alert(
+        "Remote push failed",
+        "Could not send a remote push notification. A local test notification will be shown instead.",
+      );
+    }
+
     await showAlertNotification({
       id: Date.now(),
       device_id: DEFAULT_DEVICE_ID,
@@ -149,8 +188,13 @@ export default function AlertsScreen() {
 
       <View style={styles.summaryCard}>
         <View>
-          <Text style={styles.summaryNumber}>{alerts.length}</Text>
-          <Text style={styles.summaryLabel}>recent alerts</Text>
+          <Text style={styles.summaryLabel}>
+            Last 10 minutes: {recentAlertsLast10Minutes.length}
+          </Text>
+
+          <Text style={styles.summaryLabel}>
+            Total Stored history: {alerts.length}
+          </Text>
         </View>
 
         <View style={styles.summaryIcon}>
@@ -175,32 +219,74 @@ export default function AlertsScreen() {
           </Text>
         </View>
       ) : (
-        alerts.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.alertHeader}>
-              <View style={styles.alertTitleWrap}>
-                <SeverityIcon severity={item.severity} />
+        <>
+          {paginatedAlerts.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.alertHeader}>
+                <View style={styles.alertTitleWrap}>
+                  <SeverityIcon severity={item.severity} />
 
-                <Text style={styles.cardTitle}>{item.alert_type}</Text>
+                  <Text style={styles.cardTitle}>{item.alert_type}</Text>
+                </View>
+
+                <SeverityPill severity={item.severity} />
               </View>
 
-              <SeverityPill severity={item.severity} />
+              <Text style={styles.message}>{item.message}</Text>
+
+              <View style={styles.dateRow}>
+                <Ionicons
+                  name="time-outline"
+                  size={15}
+                  color={colors.mutedText}
+                />
+                <Text style={styles.dateText}>
+                  {formatDateTime(item.created_at)}
+                </Text>
+              </View>
             </View>
+          ))}
 
-            <Text style={styles.message}>{item.message}</Text>
-
-            <View style={styles.dateRow}>
+          <View style={styles.paginationRow}>
+            <Pressable
+              style={[
+                styles.paginationButton,
+                currentPage === 1 && styles.paginationButtonDisabled,
+              ]}
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
               <Ionicons
-                name="time-outline"
-                size={15}
-                color={colors.mutedText}
+                name="chevron-back-outline"
+                size={18}
+                color={colors.text}
               />
-              <Text style={styles.dateText}>
-                {formatDateTime(item.created_at)}
-              </Text>
-            </View>
+              <Text style={styles.paginationButtonText}>Previous</Text>
+            </Pressable>
+
+            <Text style={styles.paginationText}>
+              Page {currentPage} of {totalPages}
+            </Text>
+
+            <Pressable
+              style={[
+                styles.paginationButton,
+                currentPage === totalPages && styles.paginationButtonDisabled,
+              ]}
+              disabled={currentPage === totalPages}
+              onPress={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+            >
+              <Text style={styles.paginationButtonText}>Next</Text>
+              <Ionicons
+                name="chevron-forward-outline"
+                size={18}
+                color={colors.text}
+              />
+            </Pressable>
           </View>
-        ))
+        </>
       )}
     </ScrollView>
   );
@@ -434,5 +520,41 @@ const styles = StyleSheet.create({
   },
   severityIconInfo: {
     backgroundColor: colors.primarySoft,
+  },
+  paginationRow: {
+    marginTop: 8,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  paginationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  paginationButtonDisabled: {
+    opacity: 0.45,
+  },
+
+  paginationButtonText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  paginationText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: "900",
   },
 });
