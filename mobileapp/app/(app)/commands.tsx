@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { createCommand, getDecisionEvaluation } from "../../src/api/client";
@@ -17,43 +16,11 @@ import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
-const MANUAL_ONLY_COMMANDS = [
-  "fan_on",
-  "fan_off",
-  "set_fan",
-  "server_on",
-  "server_off",
-  "set_relay",
-  "restart_server",
-  "restart_all_servers",
-  "power_all_servers",
-  "shutdown_all_servers",
-  "set_load_state",
-  "normal",
-  "low_runtime",
-  "critical_runtime",
-  "safe",
-  "all_off",
-];
-
 type ServerId =
   | "non_critical_a"
   | "non_critical_b"
   | "critical_a"
   | "critical_b";
-
-type ServerStateKey =
-  | "non_critical_server_a_on"
-  | "non_critical_server_b_on"
-  | "critical_server_a_on"
-  | "critical_server_b_on";
-
-const SERVER_STATE_KEYS: Record<ServerId, ServerStateKey> = {
-  non_critical_a: "non_critical_server_a_on",
-  non_critical_b: "non_critical_server_b_on",
-  critical_a: "critical_server_a_on",
-  critical_b: "critical_server_b_on",
-};
 
 export default function CommandsScreen() {
   const insets = useSafeAreaInsets();
@@ -93,10 +60,6 @@ export default function CommandsScreen() {
           "Command Queued",
           "The command has been queued for the ESP32.",
         );
-
-        setTimeout(() => {
-          loadCurrentDeviceState();
-        }, 1000);
       }
     } catch (error: any) {
       const backendMessage = error?.response?.data?.detail;
@@ -119,6 +82,10 @@ export default function CommandsScreen() {
       );
     } finally {
       setSendingCommand(false);
+
+      setTimeout(() => {
+        loadCurrentDeviceState(false);
+      }, 1500);
     }
   }
 
@@ -185,9 +152,11 @@ export default function CommandsScreen() {
     return sendCommand("shutdown_all_servers", {});
   }
 
-  async function loadCurrentDeviceState() {
+  async function loadCurrentDeviceState(showLoader = false) {
     try {
-      setLoadingState(true);
+      if (showLoader) {
+        setLoadingState(true);
+      }
 
       const evaluation = await getDecisionEvaluation(DEFAULT_DEVICE_ID);
 
@@ -202,7 +171,9 @@ export default function CommandsScreen() {
     } catch (error) {
       console.log("Could not load command state", error);
     } finally {
-      setLoadingState(false);
+      if (showLoader) {
+        setLoadingState(false);
+      }
     }
   }
 
@@ -217,11 +188,11 @@ export default function CommandsScreen() {
   }
 
   useEffect(() => {
-    loadCurrentDeviceState();
+    loadCurrentDeviceState(true);
 
     const intervalId = setInterval(() => {
-      loadCurrentDeviceState();
-    }, 3000);
+      loadCurrentDeviceState(false);
+    }, 5000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -311,36 +282,6 @@ export default function CommandsScreen() {
             Direct fan, relay, server, and load controls require Manual Mode.
             Automatic mode keeps the ESP32 in charge of safety decisions.
           </Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Device Mode</Text>
-        <Text style={styles.muted}>
-          Use Manual or Automatic before testing load-state commands.
-        </Text>
-
-        <View style={styles.commandGrid}>
-          <CommandButton
-            label="Monitor"
-            disabled={sendingCommand}
-            onPress={() => setDeviceMode("monitor")}
-          />
-          <CommandButton
-            label="Manual"
-            disabled={sendingCommand}
-            onPress={() => setDeviceMode("manual")}
-          />
-          <CommandButton
-            label="Automatic"
-            disabled={sendingCommand}
-            onPress={() => setDeviceMode("automatic")}
-          />
-          <CommandButton
-            label="Safe"
-            disabled={sendingCommand}
-            onPress={() => setDeviceMode("safe")}
-          />
         </View>
       </View>
 
@@ -771,38 +712,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 20,
   },
-  primaryCommandButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  primaryCommandButtonText: {
-    color: colors.white,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  secondaryCommandButton: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  secondaryCommandButtonText: {
-    color: colors.primary,
-    fontSize: 15,
-    fontWeight: "900",
-  },
   commandButtonDanger: {
     borderColor: colors.critical,
     backgroundColor: "#FEF2F2",
@@ -835,12 +744,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: "900",
-  },
-
-  serverControlActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
   },
   toggleRow: {
     flexDirection: "row",

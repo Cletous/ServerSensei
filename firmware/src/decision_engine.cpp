@@ -131,8 +131,8 @@ void updateEnhancedDecisionEngine()
         return;
     }
 
-    controlFan(temperature);
     applyEnhancedDecisionRules(temperature, humidity);
+    controlFan(temperature);
 
     Serial.print("[Enhanced Decision] Risk: ");
     Serial.print(environmentalRisk);

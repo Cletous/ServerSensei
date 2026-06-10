@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "state.h"
+#include "loads.h"
 #include "relays.h"
 
 void writeRelay(int pin, bool on)
@@ -149,6 +150,7 @@ bool setServerPowerState(String serverId, bool serverOn)
 
     loadState = "manual_override";
 
+    updateLoadPercent();
     applyRelayStates();
 
     Serial.print("[Servers] ");
@@ -202,6 +204,7 @@ bool restartAllServers()
     criticalServerAState = false;
     criticalServerBState = false;
     loadState = "manual_override";
+    updateLoadPercent();
     applyRelayStates();
 
     delay(1000);
@@ -211,6 +214,7 @@ bool restartAllServers()
     criticalServerAState = true;
     criticalServerBState = true;
     loadState = "manual_override";
+    updateLoadPercent();
     applyRelayStates();
 
     Serial.println("[Servers] Restart all complete");
@@ -234,6 +238,7 @@ bool powerAllServers()
     criticalServerBState = true;
 
     loadState = "manual_override";
+    updateLoadPercent();
     applyRelayStates();
 
     Serial.println("[Servers] All simulated servers are now ON");
@@ -251,6 +256,7 @@ bool shutdownAllServers()
     criticalServerBState = false;
 
     loadState = "manual_override";
+    updateLoadPercent();
     applyRelayStates();
 
     Serial.println("[Servers] All simulated servers are now OFF");
