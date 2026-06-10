@@ -338,11 +338,9 @@ RELAY_ACTIVE_LOW = true
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ServerSensei.git
+git clone https://github.com/Cletous/ServerSensei
 cd ServerSensei/backend
 ```
-
-Replace `YOUR_USERNAME` with the actual GitHub username or organisation.
 
 ### 2. Create a Python virtual environment
 
