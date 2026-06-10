@@ -16,6 +16,29 @@ import { colors } from "../../src/theme/colors";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
+const MANUAL_ONLY_ACTIONS = new Set([
+  "fan_on",
+  "fan_off",
+  "set_fan",
+  "server_on",
+  "server_off",
+  "set_relay",
+  "restart_server",
+  "restart_all_servers",
+  "power_all_servers",
+  "shutdown_all_servers",
+  "set_load_state",
+  "normal",
+  "low_runtime",
+  "critical_runtime",
+  "safe",
+  "all_off",
+]);
+
+function isManualOnlyAction(action: string) {
+  return MANUAL_ONLY_ACTIONS.has(action);
+}
+
 type ServerId =
   | "non_critical_a"
   | "non_critical_b"
@@ -41,6 +64,15 @@ export default function CommandsScreen() {
     action: string,
     payload: Record<string, unknown> = {},
   ) {
+    if (isManualOnlyAction(action) && currentMode !== "manual") {
+      Alert.alert(
+        "Switch to Manual Mode first",
+        "Automatic mode will override manual actions. Switch the device to Manual Mode before using fan, relay, server, or load controls.",
+      );
+
+      return null;
+    }
+
     try {
       setSendingCommand(true);
 
@@ -61,6 +93,8 @@ export default function CommandsScreen() {
           "The command has been queued for the ESP32.",
         );
       }
+
+      return response;
     } catch (error: any) {
       const backendMessage = error?.response?.data?.detail;
 
@@ -69,17 +103,19 @@ export default function CommandsScreen() {
         backendMessage.includes("requires manual mode")
       ) {
         Alert.alert(
-          "Manual Mode Required",
-          "This command directly controls hardware. Switch the device to Manual Mode before using fan, relay, server, or load controls.",
+          "Switch to Manual Mode first",
+          "Automatic mode will override manual actions. Switch the device to Manual Mode before using fan, relay, server, or load controls.",
         );
 
-        return;
+        return null;
       }
 
       Alert.alert(
         "Command failed",
         backendMessage || "Could not send command.",
       );
+
+      return null;
     } finally {
       setSendingCommand(false);
 
@@ -89,8 +125,12 @@ export default function CommandsScreen() {
     }
   }
 
-  async function setDeviceMode(mode: string) {
+  async function setDeviceMode(mode: "manual" | "automatic") {
     await sendCommand("set_mode", { mode });
+
+    setTimeout(() => {
+      loadCurrentDeviceState(false);
+    }, 2000);
   }
 
   async function setLoadState(state: string) {
@@ -251,7 +291,6 @@ export default function CommandsScreen() {
             disabled={sendingCommand || loadingState}
             onValueChange={(enabled) => {
               const nextMode = enabled ? "manual" : "automatic";
-              setCurrentMode(nextMode);
               setDeviceMode(nextMode);
             }}
             trackColor={{
