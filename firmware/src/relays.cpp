@@ -20,12 +20,16 @@ void setRelayOutputs(
     bool criticalBOn,
     bool spareOn)
 {
+    (void)spareOn; // Spare relay is intentionally disabled for safety.
+
     writeRelay(FAN_RELAY_PIN, fanOn);
     writeRelay(NON_CRITICAL_RELAY_A_PIN, nonCriticalAOn);
     writeRelay(NON_CRITICAL_RELAY_B_PIN, nonCriticalBOn);
     writeRelay(CRITICAL_RELAY_A_PIN, criticalAOn);
     writeRelay(CRITICAL_RELAY_B_PIN, criticalBOn);
-    writeRelay(SPARE_RELAY_PIN, spareOn);
+
+    // Safety rule: spare relay must never energize.
+    writeRelay(SPARE_RELAY_PIN, false);
 }
 
 void applyRelayStates()
@@ -80,6 +84,8 @@ void setupRelays()
         false,
         false,
         false);
+
+    writeRelay(SPARE_RELAY_PIN, false);
 
     Serial.println("[Relays] Relay outputs initialized");
 }

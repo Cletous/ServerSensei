@@ -32,6 +32,12 @@ const MANUAL_ONLY_COMMANDS = [
   "all_off",
 ];
 
+type ServerId =
+  | "non_critical_a"
+  | "non_critical_b"
+  | "critical_a"
+  | "critical_b";
+
 export default function CommandsScreen() {
   const insets = useSafeAreaInsets();
   const [sendingCommand, setSendingCommand] = useState(false);
@@ -91,12 +97,6 @@ export default function CommandsScreen() {
   async function setLoadState(state: string) {
     await sendCommand("set_load_state", { state });
   }
-
-  type ServerId =
-    | "non_critical_a"
-    | "non_critical_b"
-    | "critical_a"
-    | "critical_b";
 
   function serverOn(server: ServerId) {
     return sendCommand("server_on", { server });
@@ -238,8 +238,8 @@ export default function CommandsScreen() {
           <View style={styles.sectionHeaderText}>
             <Text style={styles.cardTitle}>Server Control Center</Text>
             <Text style={styles.muted}>
-              Manual server commands control simulated server groups using the
-              relay-based load management policy.
+              Individually control each simulated server relay. Load percentage
+              is recalculated from the servers currently powered ON.
             </Text>
           </View>
 
@@ -252,82 +252,61 @@ export default function CommandsScreen() {
           </View>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.sectionHeaderRow}>
-            <View style={styles.sectionHeaderText}>
-              <Text style={styles.cardTitle}>Server Control Center</Text>
-              <Text style={styles.muted}>
-                Individually control each simulated server relay. Load
-                percentage is recalculated from the servers currently powered
-                ON.
-              </Text>
-            </View>
+        <ServerControlRow
+          title="Non-Critical Server A"
+          serverId="non_critical_a"
+          disabled={sendingCommand}
+          onServerOn={serverOn}
+          onServerOff={serverOff}
+          onRestartServer={restartServer}
+        />
 
-            <View style={styles.iconBadge}>
-              <Ionicons
-                name="server-outline"
-                size={22}
-                color={colors.primaryDark}
-              />
-            </View>
-          </View>
+        <ServerControlRow
+          title="Non-Critical Server B"
+          serverId="non_critical_b"
+          disabled={sendingCommand}
+          onServerOn={serverOn}
+          onServerOff={serverOff}
+          onRestartServer={restartServer}
+        />
 
-          <ServerControlRow
-            title="Non-Critical Server A"
-            serverId="non_critical_a"
-            disabled={sendingCommand}
-            onServerOn={serverOn}
-            onServerOff={serverOff}
-            onRestartServer={restartServer}
-          />
+        <ServerControlRow
+          title="Critical Server A"
+          serverId="critical_a"
+          disabled={sendingCommand}
+          onServerOn={serverOn}
+          onServerOff={serverOff}
+          onRestartServer={restartServer}
+        />
 
-          <ServerControlRow
-            title="Non-Critical Server B"
-            serverId="non_critical_b"
-            disabled={sendingCommand}
-            onServerOn={serverOn}
-            onServerOff={serverOff}
-            onRestartServer={restartServer}
-          />
+        <ServerControlRow
+          title="Critical Server B"
+          serverId="critical_b"
+          disabled={sendingCommand}
+          onServerOn={serverOn}
+          onServerOff={serverOff}
+          onRestartServer={restartServer}
+        />
 
-          <ServerControlRow
-            title="Critical Server A"
-            serverId="critical_a"
-            disabled={sendingCommand}
-            onServerOn={serverOn}
-            onServerOff={serverOff}
-            onRestartServer={restartServer}
-          />
-
-          <ServerControlRow
-            title="Critical Server B"
-            serverId="critical_b"
-            disabled={sendingCommand}
-            onServerOn={serverOn}
-            onServerOff={serverOff}
-            onRestartServer={restartServer}
-          />
-
-          <CommandButton
-            label="Restart All Servers"
-            disabled={sendingCommand}
-            danger
-            onPress={() =>
-              Alert.alert(
-                "Restart all simulated servers?",
-                "All simulated server relays will briefly turn OFF, then turn back ON.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Restart All",
-                    style: "destructive",
-                    onPress: restartAllServers,
-                  },
-                ],
-              )
-            }
-          />
-        </View>
+        <CommandButton
+          label="Restart All Servers"
+          disabled={sendingCommand}
+          danger
+          onPress={() =>
+            Alert.alert(
+              "Restart all simulated servers?",
+              "All simulated server relays will briefly turn OFF, then turn back ON.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Restart All",
+                  style: "destructive",
+                  onPress: restartAllServers,
+                },
+              ],
+            )
+          }
+        />
       </View>
 
       <View style={styles.card}>
