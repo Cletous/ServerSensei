@@ -56,24 +56,45 @@ function AppTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedText,
         tabBarStyle: {
-          height: 64 + insets.bottom,
+          height: 66 + insets.bottom,
           paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 8,
           backgroundColor: colors.white,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "800",
+          fontSize: 11,
+          fontWeight: "900",
         },
       }}
     >
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: "Dashboard",
+          title: "Overview",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="speedometer-outline" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="monitor"
+        options={{
+          title: "Monitor",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="pulse-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="commands"
+        options={{
+          title: "Operations",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="hardware-chip-outline" size={size} color={color} />
           ),
         }}
       />
@@ -89,37 +110,40 @@ function AppTabs() {
       />
 
       <Tabs.Screen
-        name="commands"
+        name="more"
         options={{
-          title: "Commands",
+          title: "More",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="hardware-chip-outline" size={size} color={color} />
+            <Ionicons name="menu-outline" size={size} color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="environment"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="power"
+        options={{
+          href: null,
         }}
       />
 
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Settings",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
+          href: null,
         }}
       />
 
       <Tabs.Screen
         name="admin"
         options={{
-          title: "Admin",
-          href: isAdmin ? undefined : null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={size}
-              color={color}
-            />
-          ),
+          href: isAdmin ? null : null,
         }}
       />
     </Tabs>
