@@ -260,8 +260,8 @@ Install these before running the system:
 - Node.js LTS
 - npm
 - PlatformIO extension for VS Code
-- Android phone or emulator
-- Expo account for EAS APK builds
+- Android or iOS phone with Expo Go installed
+- Phone and laptop connected to the same Wi-Fi or hotspot network
 
 ### Backend
 
@@ -293,6 +293,7 @@ bblanchon/ArduinoJson
 
 ### Mobile App
 
+- Expo Go installed on the phone
 - Expo SDK 54
 - React Native
 - Expo Router
@@ -484,7 +485,7 @@ Expected response:
 
 ## Finding Your Laptop IP Address
 
-The ESP32 and Android app cannot use `localhost` to reach the backend running on your laptop. Use the laptop's network IP.
+The ESP32 and Expo Go mobile app cannot use `localhost` to reach the backend running on your laptop. Use the laptop's network IP.
 
 On Windows:
 
@@ -650,19 +651,30 @@ GET /config
 
 ## Mobile App Setup
 
-### 1. Open mobile app folder
+This project is intended to run with **Expo Go** for easier setup and demonstration. You do not need to build or install an Expo Go app during normal testing.
+
+### 1. Install Expo Go on your phone
+
+Install **Expo Go** from:
+
+- Google Play Store for Android
+- Apple App Store for iPhone
+
+Make sure your phone and laptop are connected to the same Wi-Fi or hotspot network.
+
+### 2. Open the mobile app folder
 
 ```bash
 cd ServerSensei/mobileapp
 ```
 
-### 2. Install dependencies
+### 3. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Configure backend URL
+### 4. Configure backend URL
 
 Open the mobile app API config file:
 
@@ -670,7 +682,7 @@ Open the mobile app API config file:
 mobileapp/src/config/api.ts
 ```
 
-Set the backend URL to your laptop IP:
+Set the backend URL to your laptop IP address:
 
 ```ts
 export const API_BASE_URL = "http://YOUR_LAPTOP_IP:8000";
@@ -682,41 +694,36 @@ Example:
 export const API_BASE_URL = "http://10.0.1.23:8000";
 ```
 
-Do not use `localhost` in an APK or on a physical Android phone.
+Do not use `localhost` in Expo Go or on a physical phone. `localhost` would point to the phone itself, not your laptop.
 
-### 4. Start Expo development server
+### 5. Start the Expo development server
 
 ```bash
 npx expo start
 ```
 
-For development build:
+When the QR code appears:
+
+- Android: open Expo Go and scan the QR code.
+- iPhone: open the Camera app and scan the QR code.
+
+If LAN mode fails, run Expo in tunnel mode:
 
 ```bash
-npx expo start --dev-client
+npx expo start --tunnel
 ```
 
-### 5. Build Android APK using EAS
+Tunnel mode is slower but useful when the phone cannot reach the laptop through the local network.
 
-Login to Expo if needed:
+### 6. Confirm mobile app connection
 
-```bash
-npx eas-cli@latest login
-```
-
-Build preview APK:
-
-```bash
-npx eas-cli@latest build -p android --profile preview
-```
-
-The app package name is:
+Before logging in, open this URL in your phone browser:
 
 ```text
-com.cletous.serversensei
+http://YOUR_LAPTOP_IP:8000/health
 ```
 
-Install the generated APK on your Android phone.
+If the health endpoint works on the phone, Expo Go should also be able to communicate with the backend.
 
 ---
 
@@ -729,10 +736,11 @@ Use this startup order:
 3. Confirm backend health.
 4. Power ESP32.
 5. Configure ESP32 Wi-Fi and backend URL.
-6. Open mobile app.
-7. Register first user.
-8. Login.
-9. Check dashboard.
+6. Start Expo using `npx expo start`.
+7. Open the app in Expo Go by scanning the QR code.
+8. Register first user.
+9. Login.
+10. Check dashboard.
 
 The first registered user becomes admin.
 
@@ -850,7 +858,7 @@ Admin users can:
 1. Start MySQL.
 2. Start backend.
 3. Power ESP32.
-4. Open mobile app.
+4. Start Expo Go and open the ServerSensei app.
 5. Login as admin.
 6. Show healthy dashboard under grid power.
 7. Open Environment screen.
@@ -1115,12 +1123,13 @@ or:
 upload_speed = 115200
 ```
 
-### Mobile APK cannot login
+### Mobile app cannot login in Expo Go
 
 Check:
 
 - Backend URL in `src/config/api.ts`
-- Backend is reachable from phone browser
+- Backend URL uses the laptop IP address, not `localhost`
+- Backend is reachable from the phone browser
 - User exists
 - Password is correct
 - Backend `/health` works
@@ -1217,12 +1226,13 @@ pio run
 pio run --target upload
 pio device monitor
 
-# 3. Mobile app
+# 3. Mobile app using Expo Go
 cd mobileapp
 npm install
 npx expo start
-# or build APK
-npx eas-cli@latest build -p android --profile preview
+# scan the QR code using Expo Go
+# if LAN mode fails:
+npx expo start --tunnel
 ```
 
 ---
