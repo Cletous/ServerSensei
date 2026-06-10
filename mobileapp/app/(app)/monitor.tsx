@@ -45,8 +45,8 @@ export default function MonitorScreen() {
         <NavigationCard
           icon="analytics-outline"
           title="Trends"
-          description="Combined multi-line telemetry graph will be added in Milestone 44."
-          onPress={() => router.push("/dashboard")}
+          description="Professional combined multi-line graph for temperature, humidity, air quality, battery, and load."
+          onPress={() => router.push("/trends")}
         />
 
         <NavigationCard

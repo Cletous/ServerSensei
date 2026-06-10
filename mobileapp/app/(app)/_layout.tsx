@@ -141,6 +141,13 @@ function AppTabs() {
       />
 
       <Tabs.Screen
+        name="trends"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
         name="admin"
         options={{
           href: isAdmin ? null : null,

@@ -304,9 +304,7 @@ export default function DashboardScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Quick Navigation</Text>
-        <Text style={styles.sectionSubtitle}>
-          Focused views, not crowded panels
-        </Text>
+        <Text style={styles.sectionSubtitle}>Quick actions</Text>
       </View>
 
       <View style={styles.actionGrid}>
