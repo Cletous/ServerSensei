@@ -507,9 +507,9 @@ void pollPendingCommands()
 
                 for (JsonObject command : commands)
                 {
-                    int commandId = command["id"];
-                    const char *commandAction = command["action"];
-                    const char *commandStatus = command["status"];
+                    int commandId = command["id"] | 0;
+                    const char *commandAction = command["action"] | "unknown";
+                    const char *commandStatus = command["status"] | "unknown";
 
                     Serial.println("----- Command -----");
                     Serial.print("ID: ");
@@ -519,22 +519,39 @@ void pollPendingCommands()
                     Serial.print("Status: ");
                     Serial.println(commandStatus);
 
+                    if (commandId <= 0)
+                    {
+                        Serial.println("[Commands] Invalid command id, skipping result report");
+                        continue;
+                    }
+
                     bool success = executeCommand(command);
+
+                    String resultMessage;
 
                     if (success)
                     {
+                        resultMessage = "ESP32 executed command: ";
+                        resultMessage += String(commandAction);
+
                         reportCommandResult(
                             commandId,
                             "executed",
-                            "Command executed successfully");
+                            resultMessage);
                     }
                     else
                     {
+                        resultMessage = "ESP32 failed to execute command: ";
+                        resultMessage += String(commandAction);
+                        resultMessage += ". Check Manual Mode, payload, power state, relay/server id, or simulated power depletion.";
+
                         reportCommandResult(
                             commandId,
                             "failed",
-                            "Command execution failed");
+                            resultMessage);
                     }
+
+                    delay(200);
                 }
             }
         }
