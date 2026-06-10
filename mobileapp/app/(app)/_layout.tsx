@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { useEffect, useState } from "react";
+import { Tabs, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -20,18 +20,32 @@ export default function AppTabsLayout() {
 
 function AppTabs() {
   const insets = useSafeAreaInsets();
+
   const [role, setRole] = useState<UserRole | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
-  useEffect(() => {
-    async function loadRole() {
-      const storedRole = await getStoredUserRole();
-      setRole(storedRole);
-      setRoleLoaded(true);
-    }
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-    loadRole();
-  }, []);
+      async function loadRole() {
+        const storedRole = await getStoredUserRole();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setRole(storedRole);
+        setRoleLoaded(true);
+      }
+
+      loadRole();
+
+      return () => {
+        isMounted = false;
+      };
+    }, []),
+  );
 
   const isAdmin = roleLoaded && role === "admin";
 
