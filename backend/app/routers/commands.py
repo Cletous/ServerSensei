@@ -12,6 +12,7 @@ from app.schemas.command import (
     CommandResponse,
     CommandResultRequest,
 )
+from app.services.audit_service import create_audit_log
 
 router = APIRouter(
     tags=["Commands"]
