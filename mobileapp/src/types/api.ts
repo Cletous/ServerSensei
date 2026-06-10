@@ -64,7 +64,14 @@ export type CommandResponse = {
   action: string;
   payload: Record<string, unknown> | null;
   status: string;
-  created_at: string;
+
+  created_by_user_id: number | null;
+  approved_by_user_id: number | null;
+  rejected_by_user_id: number | null;
+
+  created_at: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
   executed_at: string | null;
 };
 

@@ -2,11 +2,12 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.dependencies.auth import require_role
+from app.dependencies.auth import get_current_user, require_role
 from app.models.command import Command
 from app.models.device import Device
 from app.models.user import User
 from app.schemas.command import (
+    CommandApprovalDecisionRequest,
     CommandCreateRequest,
     CommandResponse,
     CommandResultRequest,
@@ -23,18 +24,20 @@ def build_command_response(command: Command, device: Device) -> CommandResponse:
         action=command.action,
         payload=command.payload,
         status=command.status,
+
+        created_by_user_id=command.created_by_user_id,
+        approved_by_user_id=command.approved_by_user_id,
+        rejected_by_user_id=command.rejected_by_user_id,
+
         created_at=command.created_at,
-        executed_at=command.executed_at
+        approved_at=command.approved_at,
+        rejected_at=command.rejected_at,
+        executed_at=command.executed_at,
     )
 
-@router.post("/commands", response_model=CommandResponse)
-def create_command(
-    request: CommandCreateRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "operator"]))
-):
+def find_device_by_public_id(db: Session, device_id: str) -> Device:
     device = db.query(Device).filter(
-        Device.device_id == request.device_id
+        Device.device_id == device_id
     ).first()
 
     if not device:
@@ -43,12 +46,45 @@ def create_command(
             detail="Device not found"
         )
 
+    return device
+
+def find_command_by_id(db: Session, command_id: int) -> Command:
+    command = db.query(Command).filter(
+        Command.id == command_id
+    ).first()
+
+    if not command:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Command not found"
+        )
+
+    return command
+
+@router.post("/commands", response_model=CommandResponse)
+def create_command(
+    request: CommandCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = find_device_by_public_id(db, request.device_id)
+
+    if current_user.role == "admin":
+        command_status = "pending"
+    elif current_user.role in ["operator", "viewer"]:
+        command_status = "awaiting_approval"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to request this command"
+        )
+
     command = Command(
         device_id=device.id,
         created_by_user_id=current_user.id,
         action=request.action,
         payload=request.payload,
-        status="pending"
+        status=command_status
     )
 
     db.add(command)
@@ -65,15 +101,7 @@ def get_pending_commands(
     device_id: str,
     db: Session = Depends(get_db)
 ):
-    device = db.query(Device).filter(
-        Device.device_id == device_id
-    ).first()
-
-    if not device:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Device not found"
-        )
+    device = find_device_by_public_id(db, device_id)
 
     commands = db.query(Command).filter(
         Command.device_id == device.id,
@@ -87,21 +115,113 @@ def get_pending_commands(
         for command in commands
     ]
 
+@router.get(
+    "/admin/commands/approvals",
+    response_model=list[CommandResponse]
+)
+def get_commands_awaiting_approval(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"]))
+):
+    commands = db.query(Command).filter(
+        Command.status == "awaiting_approval"
+    ).order_by(
+        Command.created_at.asc()
+    ).all()
+
+    responses = []
+
+    for command in commands:
+        device = db.query(Device).filter(
+            Device.id == command.device_id
+        ).first()
+
+        if device:
+            responses.append(build_command_response(command, device))
+
+    return responses
+
+@router.post(
+    "/admin/commands/{command_id}/approve",
+    response_model=CommandResponse
+)
+def approve_command(
+    command_id: int,
+    request: CommandApprovalDecisionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"]))
+):
+    command = find_command_by_id(db, command_id)
+
+    if command.status != "awaiting_approval":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only commands awaiting approval can be approved"
+        )
+
+    device = db.query(Device).filter(
+        Device.id == command.device_id
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    command.status = "pending"
+    command.approved_by_user_id = current_user.id
+    command.approved_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(command)
+
+    return build_command_response(command, device)
+
+@router.post(
+    "/admin/commands/{command_id}/reject",
+    response_model=CommandResponse
+)
+def reject_command(
+    command_id: int,
+    request: CommandApprovalDecisionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"]))
+):
+    command = find_command_by_id(db, command_id)
+
+    if command.status != "awaiting_approval":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only commands awaiting approval can be rejected"
+        )
+
+    device = db.query(Device).filter(
+        Device.id == command.device_id
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    command.status = "rejected"
+    command.rejected_by_user_id = current_user.id
+    command.rejected_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(command)
+
+    return build_command_response(command, device)
+
 @router.post("/commands/{command_id}/result", response_model=CommandResponse)
 def report_command_result(
     command_id: int,
     request: CommandResultRequest,
     db: Session = Depends(get_db)
 ):
-    command = db.query(Command).filter(
-        Command.id == command_id
-    ).first()
-
-    if not command:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Command not found"
-        )
+    command = find_command_by_id(db, command_id)
 
     allowed_statuses = ["executed", "failed"]
 
@@ -111,9 +231,21 @@ def report_command_result(
             detail="Status must be either executed or failed"
         )
 
+    if command.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only pending commands can be marked as executed or failed"
+        )
+
     device = db.query(Device).filter(
         Device.id == command.device_id
     ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
 
     command.status = request.status
     command.executed_at = datetime.now(timezone.utc)

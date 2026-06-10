@@ -25,15 +25,23 @@ export default function CommandsScreen() {
     try {
       setSendingCommand(true);
 
-      await createCommand({
+      const command = await createCommand({
         device_id: DEFAULT_DEVICE_ID,
         action,
         payload,
       });
 
+      if (command.status === "awaiting_approval") {
+        Alert.alert(
+          "Approval requested",
+          "Your command has been submitted for admin approval. Serversensei will not execute it until an admin approves it.",
+        );
+        return;
+      }
+
       Alert.alert(
         "Command queued",
-        "The command has been sent to the backend. The ESP32 will execute it on its next command poll.",
+        "The command has been sent to the backend. Serversensei will execute it on its next command poll.",
       );
     } catch (error) {
       Alert.alert(

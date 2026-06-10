@@ -68,6 +68,32 @@ export async function createCommand(
   return response.data;
 }
 
+export async function getCommandsAwaitingApproval(): Promise<CommandResponse[]> {
+  const response = await apiClient.get<CommandResponse[]>(
+    "/admin/commands/approvals",
+  );
+
+  return response.data;
+}
+
+export async function approveCommand(commandId: number): Promise<CommandResponse> {
+  const response = await apiClient.post<CommandResponse>(
+    `/admin/commands/${commandId}/approve`,
+    {},
+  );
+
+  return response.data;
+}
+
+export async function rejectCommand(commandId: number): Promise<CommandResponse> {
+  const response = await apiClient.post<CommandResponse>(
+    `/admin/commands/${commandId}/reject`,
+    {},
+  );
+
+  return response.data;
+}
+
 export async function getRuntimeSettings(
   deviceId: string
 ): Promise<RuntimeSettings> {

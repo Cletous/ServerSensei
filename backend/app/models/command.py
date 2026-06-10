@@ -20,14 +20,42 @@ class Command(Base):
         nullable=True
     )
 
+    approved_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
+    rejected_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True
+    )
+
     action = Column(String(100), nullable=False)
     payload = Column(JSON, nullable=True)
 
+    # Supported statuses:
+    # awaiting_approval
+    # pending
+    # executed
+    # failed
+    # rejected
     status = Column(String(50), default="pending", nullable=False)
 
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()
+    )
+
+    approved_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    rejected_at = Column(
+        DateTime(timezone=True),
+        nullable=True
     )
 
     executed_at = Column(
