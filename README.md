@@ -618,10 +618,10 @@ http://ESP32_IP/config
 
 To get the ESP32_IP connect it to WIFI and look for the following in the monitoring terminal
 
-````text
+```text
 Wi-Fi connected successfully
 ESP32 IP Address: 10.128.44.99
-```text
+```
 
 Use this page (http://ESP32_IP/config) to set:
 
@@ -633,7 +633,7 @@ Example backend URL:
 
 ```text
 http://10.0.1.23:8000
-````
+```
 
 After saving Wi-Fi or backend URL settings, restart the ESP32.
 
