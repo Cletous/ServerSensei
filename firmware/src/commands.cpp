@@ -72,6 +72,25 @@ bool isValidLoadState(String stateValue)
         stateValue == "all_off");
 }
 
+bool commandRequiresManualMode(String actionValue)
+{
+    return (
+        actionValue == "set_load_state" ||
+        actionValue == "led_on" ||
+        actionValue == "led_off" ||
+        actionValue == "fan_on" ||
+        actionValue == "fan_off" ||
+        actionValue == "set_fan" ||
+        actionValue == "set_relay" ||
+        actionValue == "server_on" ||
+        actionValue == "server_off" ||
+        actionValue == "normal" ||
+        actionValue == "low_runtime" ||
+        actionValue == "critical_runtime" ||
+        actionValue == "safe" ||
+        actionValue == "all_off");
+}
+
 bool executeCommand(JsonObject command)
 {
     const char *action = command["action"];
@@ -122,6 +141,16 @@ bool executeCommand(JsonObject command)
         return true;
     }
 
+    if (commandRequiresManualMode(actionValue) && deviceMode != "manual")
+    {
+        Serial.print("[Commands] Manual-only command rejected: ");
+        Serial.print(actionValue);
+        Serial.print(" | Current mode: ");
+        Serial.println(deviceMode);
+
+        return false;
+    }
+
     if (actionValue == "set_load_state")
     {
         JsonObject payload = command["payload"];
@@ -146,12 +175,6 @@ bool executeCommand(JsonObject command)
         {
             Serial.print("[Commands] Invalid load state: ");
             Serial.println(stateValue);
-            return false;
-        }
-
-        if (deviceMode == "monitor")
-        {
-            Serial.println("[Commands] Load state rejected: device is in monitor mode");
             return false;
         }
 
