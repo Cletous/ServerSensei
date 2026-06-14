@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings as app_settings
-from app.core.database import Base, engine
+from app.core.database import Base, engine, SessionLocal
 from app.models import (
     user,
     device,
@@ -19,6 +19,12 @@ from app.routers import alerts, audit_logs, auth, commands, devices, decision, p
 from app.routers import settings as settings_router
 
 Base.metadata.create_all(bind=engine)
+
+db = SessionLocal()
+try:
+    seed_system_defaults(db)
+finally:
+    db.close()
 
 app = FastAPI(
     title=app_settings.APP_NAME,

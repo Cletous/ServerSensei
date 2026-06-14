@@ -24,6 +24,9 @@ function AppTabs() {
   const [role, setRole] = useState<UserRole | null>(null);
   const [roleLoaded, setRoleLoaded] = useState(false);
 
+  const isViewer = roleLoaded && role === "viewer";
+  const isAdmin = roleLoaded && role === "admin";
+
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
@@ -46,8 +49,6 @@ function AppTabs() {
       };
     }, []),
   );
-
-  const isAdmin = roleLoaded && role === "admin";
 
   return (
     <Tabs
@@ -93,6 +94,7 @@ function AppTabs() {
         name="commands"
         options={{
           title: "Operations",
+          href: isViewer ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="hardware-chip-outline" size={size} color={color} />
           ),

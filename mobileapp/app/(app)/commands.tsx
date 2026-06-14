@@ -13,6 +13,8 @@ import { createCommand, getDecisionEvaluation } from "../../src/api/client";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../src/theme/colors";
+import { UserRole } from "@/src/types/api";
+import { getStoredUserRole } from "@/src/storage/authStorage";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -114,6 +116,24 @@ export default function CommandsScreen() {
     critical_a: false,
     critical_b: false,
   });
+
+  const [role, setRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    getStoredUserRole().then(setRole);
+  }, []);
+
+  if (role === "viewer") {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.title}>Read-only access</Text>
+        <Text style={styles.subtitle}>
+          Viewer accounts can monitor ServerSensei but cannot perform control
+          actions.
+        </Text>
+      </View>
+    );
+  }
 
   async function sendCommand(
     action: string,

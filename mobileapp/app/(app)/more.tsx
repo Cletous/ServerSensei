@@ -63,12 +63,14 @@ export default function MoreScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>System</Text>
 
-        <MenuRow
-          icon="settings-outline"
-          title="Runtime Settings"
-          subtitle="Cooling thresholds, UPS simulation, and backend URL configuration."
-          onPress={() => router.push("/settings")}
-        />
+        {role !== "viewer" ? (
+          <MenuRow
+            icon="settings-outline"
+            title="Runtime Settings"
+            subtitle="Cooling thresholds, UPS simulation, and backend URL configuration."
+            onPress={() => router.push("/settings")}
+          />
+        ) : null}
 
         <MenuRow
           icon="notifications-outline"

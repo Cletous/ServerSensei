@@ -145,8 +145,22 @@ def create_command(
             )
         )
 
+    if current_user.role == "viewer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewer accounts are read-only and cannot request commands."
+        )
+
     if current_user.role == "admin":
         command_status = "pending"
+    elif current_user.role == "operator":
+        command_status = "awaiting_approval"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to request this command"
+        )
+
     elif current_user.role in ["operator", "viewer"]:
         command_status = "awaiting_approval"
     else:

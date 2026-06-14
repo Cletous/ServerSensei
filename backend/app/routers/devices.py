@@ -37,7 +37,7 @@ def register_device(
         device_id=request.device_id,
         device_name=request.device_name,
         location=request.location,
-        mode="monitor",
+        mode="automatic",
         online=False
     )
 
@@ -48,7 +48,7 @@ def register_device(
     device_status = DeviceStatus(
         device_id=device.id,
         wifi_status="unknown",
-        mode="monitor",
+        mode="automatic",
         uptime=0
     )
 
