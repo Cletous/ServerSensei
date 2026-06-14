@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -24,6 +23,7 @@ import {
 import { getStoredUserRole } from "../../../src/storage/authStorage";
 import { colors } from "../../../src/theme/colors";
 import type { UserItem, UserRole } from "../../../src/types/api";
+import { showError, showInfo } from "@/src/utils/dialogs";
 
 const ROLES: UserRole[] = ["admin", "operator", "viewer"];
 
@@ -64,7 +64,7 @@ export default function UserManagementScreen() {
       const data = await getAdminUsers();
       setUsers(data);
     } catch {
-      Alert.alert("Users error", "Could not load users.");
+      showError("Users error", "Could not load users.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -102,7 +102,7 @@ export default function UserManagementScreen() {
       await updateAdminUserRole(user.id, { role });
       await loadUsers(false);
     } catch {
-      Alert.alert("Role update failed", "Could not update this user role.");
+      showError("Role update failed", "Could not update this user role.");
     } finally {
       setBusyUserId(null);
     }
@@ -114,7 +114,7 @@ export default function UserManagementScreen() {
       await updateAdminUserStatus(user.id, { active });
       await loadUsers(false);
     } catch {
-      Alert.alert("Status update failed", "Could not update this user status.");
+      showError("Status update failed", "Could not update this user status.");
     } finally {
       setBusyUserId(null);
     }
@@ -125,7 +125,7 @@ export default function UserManagementScreen() {
     const email = newEmail.trim().toLowerCase();
 
     if (!name || !email) {
-      Alert.alert("Missing details", "Enter the user's name and email.");
+      showError("Missing details", "Enter the user's name and email.");
       return;
     }
 
@@ -145,12 +145,12 @@ export default function UserManagementScreen() {
 
       await loadUsers(false);
 
-      Alert.alert(
+      showInfo(
         "User created",
         "The user account was created. Default password: Pass@123",
       );
     } catch {
-      Alert.alert(
+      showError(
         "User creation failed",
         "Could not create the user. Check that the email is not already registered.",
       );

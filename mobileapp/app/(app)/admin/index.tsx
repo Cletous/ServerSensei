@@ -65,14 +65,22 @@ export default function AdminHomeScreen() {
         icon="checkmark-done-circle-outline"
         title="Command Approval Inbox & Audit Trail"
         subtitle="Review operator command requests and inspect recent admin activity."
-        onPress={() => router.push("./approvals")}
+        onPress={() =>
+          router.push({
+            pathname: "/admin/approvals",
+          })
+        }
       />
 
       <AdminButton
         icon="people-outline"
         title="User Management"
         subtitle="Create users, assign roles, and enable or disable accounts."
-        onPress={() => router.push("./users")}
+        onPress={() =>
+          router.push({
+            pathname: "/admin/users",
+          })
+        }
       />
     </ScrollView>
   );

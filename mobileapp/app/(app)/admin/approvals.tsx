@@ -23,6 +23,7 @@ import { getStoredUserRole } from "../../../src/storage/authStorage";
 import { colors } from "../../../src/theme/colors";
 import type { AuditLogResponse, CommandResponse } from "../../../src/types/api";
 import { formatDateTime } from "../../../src/utils/dateTime";
+import { showError, showInfo } from "@/src/utils/dialogs";
 
 function getRequesterLabel(command: CommandResponse) {
   return (
@@ -59,7 +60,7 @@ export default function CommandApprovalsScreen() {
       setApprovals(approvalData);
       setAuditLogs(auditData);
     } catch {
-      Alert.alert(
+      showError(
         "Admin error",
         "Could not load command approvals or audit trail.",
       );
@@ -96,12 +97,12 @@ export default function CommandApprovalsScreen() {
       await approveCommand(command.id);
       await loadData(false);
 
-      Alert.alert(
+      showInfo(
         "Command approved",
         "The command has been queued for ESP32 execution.",
       );
     } catch {
-      Alert.alert("Approval failed", "Could not approve this command.");
+      showError("Approval failed", "Could not approve this command.");
     } finally {
       setBusyCommandId(null);
     }
@@ -113,12 +114,12 @@ export default function CommandApprovalsScreen() {
       await rejectCommand(command.id);
       await loadData(false);
 
-      Alert.alert(
+      showInfo(
         "Command rejected",
         "The command has been rejected and will not be executed.",
       );
     } catch {
-      Alert.alert("Rejection failed", "Could not reject this command.");
+      showError("Rejection failed", "Could not reject this command.");
     } finally {
       setBusyCommandId(null);
     }

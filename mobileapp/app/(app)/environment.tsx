@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,7 @@ import { getDecisionEvaluation } from "../../src/api/client";
 import { colors } from "../../src/theme/colors";
 import type { DecisionEvaluation } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { showError } from "@/src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -30,7 +30,7 @@ export default function EnvironmentScreen() {
       const data = await getDecisionEvaluation(DEFAULT_DEVICE_ID);
       setEvaluation(data);
     } catch (error) {
-      Alert.alert("Environment error", "Could not load environmental status.");
+      showError("Environment error", "Could not load environmental status.");
     } finally {
       setLoading(false);
       setRefreshing(false);

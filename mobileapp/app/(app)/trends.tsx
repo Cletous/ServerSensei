@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -16,6 +15,7 @@ import { TelemetryMetricChartCard } from "../../src/components/TelemetryMetricCh
 import { colors } from "../../src/theme/colors";
 import type { TelemetryHistoryPoint } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { showError } from "@/src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 const HISTORY_LIMIT = 60;
@@ -40,7 +40,7 @@ export default function TrendsScreen() {
 
       setHistory(sortedData);
     } catch (error) {
-      Alert.alert(
+      showError(
         "Trends error",
         "Could not load telemetry history. Check backend, JWT token, and network.",
       );

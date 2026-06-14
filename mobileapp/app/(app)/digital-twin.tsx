@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,6 +16,7 @@ import { getDecisionEvaluation } from "../../src/api/client";
 import { colors } from "../../src/theme/colors";
 import type { DecisionEvaluation } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { showError } from "@/src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -32,7 +32,7 @@ export default function DigitalTwinScreen() {
       const data = await getDecisionEvaluation(DEFAULT_DEVICE_ID);
       setEvaluation(data);
     } catch (error) {
-      Alert.alert(
+      showError(
         "Digital twin error",
         "Could not load the live infrastructure state.",
       );

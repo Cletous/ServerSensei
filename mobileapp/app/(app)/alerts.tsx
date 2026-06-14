@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -19,6 +18,7 @@ import { getDeviceAlerts, sendRemoteTestPush } from "../../src/api/client";
 import type { AlertItem } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
 import { colors } from "../../src/theme/colors";
+import { showError, showInfo } from "@/src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -83,7 +83,7 @@ export default function AlertsScreen() {
         notifiedAlertIdsRef.current = new Set(trimmedIds);
       }
     } catch (error) {
-      Alert.alert(
+      showError(
         "Alerts error",
         "Could not load alerts. Check backend, login token, and network.",
       );
@@ -130,19 +130,19 @@ export default function AlertsScreen() {
       const result = await sendRemoteTestPush();
 
       if (result.sent_count > 0) {
-        Alert.alert(
+        showInfo(
           "Remote push sent",
           `Backend attempted ${result.sent_count} remote push notification(s).`,
         );
         return;
       }
 
-      Alert.alert(
+      showInfo(
         "No remote token found",
         "No registered remote push token was found for this user. A local test notification will be shown instead.",
       );
     } catch (error) {
-      Alert.alert(
+      showError(
         "Remote push failed",
         "Could not send a remote push notification. A local test notification will be shown instead.",
       );

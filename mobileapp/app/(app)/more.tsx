@@ -1,18 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { clearToken, getStoredUserRole } from "../../src/storage/authStorage";
 import { colors } from "../../src/theme/colors";
 import { useEffect, useState } from "react";
+import { showConfirm } from "../../src/utils/dialogs";
 import type { UserRole } from "../../src/types/api";
 
 export default function MoreScreen() {
@@ -24,21 +18,17 @@ export default function MoreScreen() {
   }, []);
 
   async function handleLogout() {
-    Alert.alert(
-      "Log out?",
-      "You will need to sign in again to access ServerSensei.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Log out",
-          style: "destructive",
-          onPress: async () => {
-            await clearToken();
-            router.replace("/login");
-          },
-        },
-      ],
-    );
+    showConfirm({
+      title: "Log out?",
+      message: "You will need to sign in again to access ServerSensei.",
+      confirmText: "Log out",
+      cancelText: "Cancel",
+      destructive: true,
+      onConfirm: async () => {
+        await clearToken();
+        router.replace("/login");
+      },
+    });
   }
 
   return (

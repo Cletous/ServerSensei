@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,6 +20,7 @@ import type {
   RecentAlert,
 } from "../../src/types/api";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { showError } from "@/src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -54,7 +54,7 @@ export default function DashboardScreen() {
       const decisionData = await getDecisionEvaluation(targetDevice.device_id);
       setEvaluation(decisionData);
     } catch (error) {
-      Alert.alert(
+      showError(
         "Overview error",
         "Could not load system overview. Check backend, JWT token, and network.",
       );

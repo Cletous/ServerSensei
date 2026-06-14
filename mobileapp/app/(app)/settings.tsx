@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,6 +19,7 @@ import {
 import type { RuntimeSettings } from "../../src/types/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { formatDateTime } from "../../src/utils/dateTime";
+import { showError, showInfo } from "../../src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -67,7 +67,7 @@ export default function SettingsScreen() {
       );
       setRestartBatteryPercent(String(data.demo_restart_battery_percent));
     } catch (error) {
-      Alert.alert(
+      showError(
         "Settings error",
         "Could not load runtime settings. Check backend, login token, and device registration.",
       );
@@ -106,12 +106,12 @@ export default function SettingsScreen() {
       recoveryRate === null ||
       restartPercent === null
     ) {
-      Alert.alert("Invalid values", "Please enter numbers only.");
+      showError("Invalid values", "Please enter numbers only.");
       return;
     }
 
     if (fanOff >= fanOn) {
-      Alert.alert(
+      showError(
         "Invalid fan thresholds",
         "Fan OFF temperature must be lower than Fan ON temperature.",
       );
@@ -119,7 +119,7 @@ export default function SettingsScreen() {
     }
 
     if (criticalRuntime >= lowRuntime) {
-      Alert.alert(
+      showError(
         "Invalid runtime thresholds",
         "Critical runtime threshold must be lower than low runtime threshold.",
       );
@@ -141,12 +141,12 @@ export default function SettingsScreen() {
 
       setSettings(updatedSettings);
 
-      Alert.alert(
+      showInfo(
         "Settings saved",
         "Runtime settings were updated. The ESP32 should apply them on its next settings poll.",
       );
     } catch (error) {
-      Alert.alert(
+      showError(
         "Save failed",
         "Could not save settings. Check that your user role is admin/operator and that the values are valid.",
       );

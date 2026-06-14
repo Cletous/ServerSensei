@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +17,7 @@ import { saveSession } from "../src/storage/authStorage";
 import { registerDeviceForRemotePush } from "../src/services/notificationService";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../src/theme/colors";
+import { showError } from "../src/utils/dialogs";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -32,7 +32,7 @@ export default function LoginScreen() {
 
     if (!email || !password) {
       setErrorMessage("Please enter email and password.");
-      Alert.alert("Missing details", "Please enter email and password.");
+      showError("Missing details", "Please enter email and password.");
       return;
     }
 
@@ -62,7 +62,7 @@ export default function LoginScreen() {
         "Login failed. Check your email, password, backend URL, and backend server.",
       );
 
-      Alert.alert(
+      showError(
         "Login failed",
         "Check your email, password, backend URL, and network connection.",
       );

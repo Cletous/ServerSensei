@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../src/theme/colors";
 import { UserRole } from "@/src/types/api";
 import { getStoredUserRole } from "@/src/storage/authStorage";
+import { showError, showInfo } from "@/src/utils/dialogs";
 
 const DEFAULT_DEVICE_ID = "serversensei-esp32-001";
 
@@ -141,7 +142,7 @@ export default function CommandsScreen() {
     payload: Record<string, unknown> = {},
   ) {
     if (isManualOnlyAction(action) && currentMode !== "manual") {
-      Alert.alert(
+      showInfo(
         "Switch to Manual Mode first",
         "Automatic mode will override manual actions. Switch the device to Manual Mode before using fan, relay, server, or load controls.",
       );
@@ -159,12 +160,12 @@ export default function CommandsScreen() {
       });
 
       if (response.status === "awaiting_approval") {
-        Alert.alert(
+        showInfo(
           "Approval Requested",
           "This command has been sent to the admin approval inbox.",
         );
       } else {
-        Alert.alert(
+        showInfo(
           "Command Queued",
           "The command has been queued for the ESP32.",
         );
@@ -178,7 +179,7 @@ export default function CommandsScreen() {
         typeof backendMessage === "string" &&
         backendMessage.includes("requires manual mode")
       ) {
-        Alert.alert(
+        showInfo(
           "Switch to Manual Mode first",
           "Automatic mode will override manual actions. Switch the device to Manual Mode before using fan, relay, server, or load controls.",
         );
@@ -186,10 +187,7 @@ export default function CommandsScreen() {
         return null;
       }
 
-      Alert.alert(
-        "Command failed",
-        backendMessage || "Could not send command.",
-      );
+      showError("Command failed", backendMessage || "Could not send command.");
 
       return null;
     } finally {
