@@ -17,6 +17,7 @@ from app.models import (
 )
 from app.routers import alerts, audit_logs, auth, commands, devices, decision, power, push_tokens, telemetry, users
 from app.routers import settings as settings_router
+from app.services.bootstrap_service import seed_system_defaults
 
 Base.metadata.create_all(bind=engine)
 

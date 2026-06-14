@@ -175,14 +175,6 @@ def create_command(
             detail="You do not have permission to request this command"
         )
 
-    elif current_user.role in ["operator", "viewer"]:
-        command_status = "awaiting_approval"
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to request this command"
-        )
-
     command = Command(
         device_id=device.id,
         created_by_user_id=current_user.id,

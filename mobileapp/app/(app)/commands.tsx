@@ -126,8 +126,9 @@ export default function CommandsScreen() {
   if (role === "viewer") {
     return (
       <View style={styles.center}>
-        <Text style={styles.title}>Read-only access</Text>
-        <Text style={styles.subtitle}>
+        <Ionicons name="eye-outline" size={34} color={colors.primary} />
+        <Text style={styles.readOnlyTitle}>Read-only access</Text>
+        <Text style={styles.readOnlyText}>
           Viewer accounts can monitor ServerSensei but cannot perform control
           actions.
         </Text>
@@ -907,6 +908,13 @@ function CommandButton({
 }
 
 const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1116,6 +1124,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     flex: 1,
+  },
+
+  readOnlyTitle: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: "900",
+    marginTop: 12,
+    textAlign: "center",
+  },
+
+  readOnlyText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 21,
+    marginTop: 8,
+    textAlign: "center",
   },
 
   serverStatusText: {

@@ -202,6 +202,13 @@ export async function getAdminUsers(): Promise<UserItem[]> {
   return response.data;
 }
 
+export async function createAdminUser(
+  request: UserCreateRequest
+): Promise<UserItem> {
+  const response = await apiClient.post<UserItem>("/admin/users", request);
+  return response.data;
+}
+
 export async function updateAdminUserRole(
   userId: number,
   request: UserRoleUpdateRequest
