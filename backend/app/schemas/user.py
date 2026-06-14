@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr
 
 class UserResponse(BaseModel):
     id: int
+    name: str | None = None
     email: EmailStr
     role: str
     active: bool
@@ -11,6 +12,12 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserCreateRequest(BaseModel):
+    name: str
+    email: EmailStr
+    role: str
+    password: str | None = None
 
 class UserRoleUpdateRequest(BaseModel):
     role: str

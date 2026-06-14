@@ -21,6 +21,9 @@ class CommandResponse(BaseModel):
     status: str
 
     created_by_user_id: int | None = None
+    created_by_user_name: str | None = None
+    created_by_user_email: str | None = None
+
     approved_by_user_id: int | None = None
     rejected_by_user_id: int | None = None
 

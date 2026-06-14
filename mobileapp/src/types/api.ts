@@ -86,6 +86,9 @@ export type CommandResponse = {
   status: string;
 
   created_by_user_id: number | null;
+  created_by_user_name?: string | null;
+  created_by_user_email?: string | null;
+
   approved_by_user_id: number | null;
   rejected_by_user_id: number | null;
 
@@ -172,11 +175,18 @@ export type PushTokenResponse = {
 
 export type UserItem = {
   id: number;
+  name: string | null;
   email: string;
   role: UserRole;
   active: boolean;
   created_at: string | null;
   updated_at: string | null;
+};
+
+export type UserCreateRequest = {
+  name: string;
+  email: string;
+  role: UserRole;
 };
 
 export type UserRoleUpdateRequest = {

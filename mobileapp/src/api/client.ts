@@ -15,9 +15,10 @@ import type {
   RuntimeSettings,
   RuntimeSettingsUpdateRequest,
   TelemetryHistoryPoint,
+  UserCreateRequest,
   UserItem,
   UserRoleUpdateRequest,
-  UserStatusUpdateRequest
+  UserStatusUpdateRequest,
 } from "../types/api";
 
 export const apiClient = axios.create({

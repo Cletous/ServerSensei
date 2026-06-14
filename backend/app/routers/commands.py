@@ -61,7 +61,18 @@ MANUAL_ONLY_COMMANDS = [
 def command_requires_manual_mode(action: str) -> bool:
     return action in MANUAL_ONLY_COMMANDS
 
-def build_command_response(command: Command, device: Device) -> CommandResponse:
+def build_command_response(
+    command: Command,
+    device: Device,
+    db: Session
+) -> CommandResponse:
+    requester = None
+
+    if command.created_by_user_id:
+        requester = db.query(User).filter(
+            User.id == command.created_by_user_id
+        ).first()
+
     return CommandResponse(
         id=command.id,
         device_id=device.device_id,
@@ -70,6 +81,9 @@ def build_command_response(command: Command, device: Device) -> CommandResponse:
         status=command.status,
 
         created_by_user_id=command.created_by_user_id,
+        created_by_user_name=requester.name if requester else None,
+        created_by_user_email=requester.email if requester else None,
+
         approved_by_user_id=command.approved_by_user_id,
         rejected_by_user_id=command.rejected_by_user_id,
 
@@ -78,7 +92,7 @@ def build_command_response(command: Command, device: Device) -> CommandResponse:
         rejected_at=command.rejected_at,
         executed_at=command.executed_at,
     )
-
+    
 def find_device_by_public_id(db: Session, device_id: str) -> Device:
     device = db.query(Device).filter(
         Device.device_id == device_id
@@ -223,7 +237,7 @@ def create_command(
     db.commit()
     db.refresh(command)
 
-    return build_command_response(command, device)
+    return build_command_response(command, device, db)
 
 @router.get(
     "/devices/{device_id}/commands/pending",
@@ -243,7 +257,7 @@ def get_pending_commands(
     ).all()
 
     return [
-        build_command_response(command, device)
+        build_command_response(command, device, db)
         for command in commands
     ]
 
@@ -269,7 +283,7 @@ def get_commands_awaiting_approval(
         ).first()
 
         if device:
-            responses.append(build_command_response(command, device))
+            responses.append(build_command_response(command, device, db))
 
     return responses
 
@@ -327,7 +341,7 @@ def approve_command(
     db.commit()
     db.refresh(command)
 
-    return build_command_response(command, device)
+    return build_command_response(command, device, db)
 
 @router.post(
     "/admin/commands/{command_id}/reject",
@@ -383,7 +397,7 @@ def reject_command(
     db.commit()
     db.refresh(command)
 
-    return build_command_response(command, device)
+    return build_command_response(command, device, db)
 
 @router.post("/commands/{command_id}/result", response_model=CommandResponse)
 def report_command_result(
@@ -441,4 +455,4 @@ def report_command_result(
     db.commit()
     db.refresh(command)
 
-    return build_command_response(command, device)
+    return build_command_response(command, device, db)

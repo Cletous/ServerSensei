@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.dependencies.auth import require_role
 from app.models.user import User
+from app.core.security import hash_password
 from app.schemas.user import (
+    UserCreateRequest,
     UserResponse,
     UserRoleUpdateRequest,
     UserStatusUpdateRequest,
@@ -17,6 +19,76 @@ router = APIRouter(
 
 ALLOWED_ROLES = ["admin", "operator", "viewer"]
 
+DEFAULT_ADMIN_CREATED_USER_PASSWORD = "Pass@123"
+
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(
+    request: UserCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"]))
+):
+    role = request.role.lower().strip()
+
+    if role not in ALLOWED_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role must be admin, operator, or viewer"
+        )
+
+    name = request.name.strip()
+
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Name is required"
+        )
+
+    existing_user = db.query(User).filter(
+        User.email == request.email
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    password = request.password or DEFAULT_ADMIN_CREATED_USER_PASSWORD
+
+    user = User(
+        name=name,
+        email=request.email,
+        password_hash=hash_password(password),
+        role=role,
+        active=True,
+    )
+
+    db.add(user)
+    db.flush()
+
+    create_audit_log(
+        db=db,
+        user_id=current_user.id,
+        action="USER_CREATED",
+        entity_type="user",
+        entity_id=user.id,
+        description=(
+            f"Admin {current_user.email} created user {user.email} "
+            f"with role {user.role}"
+        ),
+        details={
+            "target_user_id": user.id,
+            "target_user_name": user.name,
+            "target_user_email": user.email,
+            "target_user_role": user.role,
+        },
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    return user
+    
 @router.get("", response_model=list[UserResponse])
 def get_users(
     db: Session = Depends(get_db),

@@ -16,9 +16,9 @@ DEFAULT_DEVICE_MODE = "automatic"
 DEFAULT_PASSWORD = "Pass@123"
 
 SEEDED_USERS = [
-    ("admin@test.com", "admin"),
-    ("operator@test.com", "operator"),
-    ("viewer@test.com", "viewer"),
+    ("Admin Cee", "admin@test.com", "admin"),
+    ("Operator Dee", "operator@test.com", "operator"),
+    ("Viewer Gee", "viewer@test.com", "viewer"),
 ]
 
 
@@ -77,12 +77,13 @@ def seed_system_defaults(db: Session) -> None:
         if not device_settings:
             db.add(DeviceSetting(device_id=device.id))
 
-    for email, role in SEEDED_USERS:
+    for name, email, role in SEEDED_USERS:
         user = db.query(User).filter(User.email == email).first()
 
         if not user:
             db.add(
                 User(
+                    name=name,
                     email=email,
                     password_hash=hash_password(DEFAULT_PASSWORD),
                     role=role,
